@@ -1,7 +1,9 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -9,8 +11,16 @@ import (
 	"testing"
 )
 
+type readinessStub struct {
+	err error
+}
+
+func (stub readinessStub) Ping(context.Context) error {
+	return stub.err
+}
+
 func TestHealth(t *testing.T) {
-	recorder := performRequest(http.MethodGet, "/health")
+	recorder := performRequest(http.MethodGet, "/health", nil)
 
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusOK)
@@ -29,7 +39,7 @@ func TestHealth(t *testing.T) {
 }
 
 func TestNotFound(t *testing.T) {
-	recorder := performRequest(http.MethodGet, "/missing")
+	recorder := performRequest(http.MethodGet, "/missing", nil)
 
 	if recorder.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusNotFound)
@@ -38,12 +48,37 @@ func TestNotFound(t *testing.T) {
 }
 
 func TestMethodNotAllowed(t *testing.T) {
-	recorder := performRequest(http.MethodPost, "/health")
+	recorder := performRequest(http.MethodPost, "/health", nil)
 
 	if recorder.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusMethodNotAllowed)
 	}
 	assertErrorCode(t, recorder, "method_not_allowed")
+}
+
+func TestReadiness(t *testing.T) {
+	recorder := performRequest(http.MethodGet, "/ready", readinessStub{})
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusOK)
+	}
+
+	var response healthResponse
+	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response.Status != "ready" {
+		t.Errorf("status body = %q, want ready", response.Status)
+	}
+}
+
+func TestReadinessWhenDatabaseIsUnavailable(t *testing.T) {
+	recorder := performRequest(http.MethodGet, "/ready", readinessStub{err: errors.New("database unavailable")})
+
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusServiceUnavailable)
+	}
+	assertErrorCode(t, recorder, "database_unavailable")
 }
 
 func TestRecoverer(t *testing.T) {
@@ -62,11 +97,11 @@ func TestRecoverer(t *testing.T) {
 	assertErrorCode(t, recorder, "internal_error")
 }
 
-func performRequest(method, target string) *httptest.ResponseRecorder {
+func performRequest(method, target string, readinessChecker ReadinessChecker) *httptest.ResponseRecorder {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	request := httptest.NewRequest(method, target, nil)
 	recorder := httptest.NewRecorder()
-	NewRouter(logger).ServeHTTP(recorder, request)
+	NewRouter(logger, readinessChecker).ServeHTTP(recorder, request)
 	return recorder
 }
 

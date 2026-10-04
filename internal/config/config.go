@@ -14,9 +14,11 @@ const (
 )
 
 type Config struct {
-	Environment     string
-	Port            int
-	ShutdownTimeout time.Duration
+	Environment            string
+	Port                   int
+	ShutdownTimeout        time.Duration
+	DatabaseURL            string
+	DatabaseConnectTimeout time.Duration
 }
 
 func Load() (Config, error) {
@@ -30,15 +32,27 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		return Config{}, fmt.Errorf("DATABASE_URL is required")
+	}
+
+	databaseConnectTimeout, err := readDuration("DATABASE_CONNECT_TIMEOUT", os.Getenv("DATABASE_CONNECT_TIMEOUT"), 5*time.Second)
+	if err != nil {
+		return Config{}, err
+	}
+
 	environment := os.Getenv("APP_ENV")
 	if environment == "" {
 		environment = defaultEnvironment
 	}
 
 	return Config{
-		Environment:     environment,
-		Port:            port,
-		ShutdownTimeout: shutdownTimeout,
+		Environment:            environment,
+		Port:                   port,
+		ShutdownTimeout:        shutdownTimeout,
+		DatabaseURL:            databaseURL,
+		DatabaseConnectTimeout: databaseConnectTimeout,
 	}, nil
 }
 

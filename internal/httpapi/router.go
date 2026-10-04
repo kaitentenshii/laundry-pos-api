@@ -8,12 +8,13 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func NewRouter(logger *slog.Logger) http.Handler {
+func NewRouter(logger *slog.Logger, readinessChecker ReadinessChecker) http.Handler {
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(recoverer(logger))
 
 	router.Get("/health", health)
+	router.Get("/ready", readiness(readinessChecker))
 
 	router.NotFound(func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "The requested resource was not found.")

@@ -17,13 +17,13 @@ type App struct {
 	server *http.Server
 }
 
-func New(cfg config.Config, logger *slog.Logger) *App {
+func New(cfg config.Config, logger *slog.Logger, readinessChecker httpapi.ReadinessChecker) *App {
 	return &App{
 		config: cfg,
 		logger: logger,
 		server: &http.Server{
 			Addr:              cfg.Address(),
-			Handler:           httpapi.NewRouter(logger),
+			Handler:           httpapi.NewRouter(logger, readinessChecker),
 			ReadHeaderTimeout: 5 * time.Second,
 			ReadTimeout:       15 * time.Second,
 			WriteTimeout:      15 * time.Second,
