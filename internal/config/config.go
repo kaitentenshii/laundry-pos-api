@@ -11,6 +11,7 @@ const (
 	defaultEnvironment     = "development"
 	defaultPort            = 8080
 	defaultShutdownTimeout = 10 * time.Second
+	defaultMigrationsPath  = "file://migrations"
 )
 
 type Config struct {
@@ -19,6 +20,7 @@ type Config struct {
 	ShutdownTimeout        time.Duration
 	DatabaseURL            string
 	DatabaseConnectTimeout time.Duration
+	MigrationsPath         string
 }
 
 func Load() (Config, error) {
@@ -42,6 +44,11 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	migrationsPath := os.Getenv("MIGRATIONS_PATH")
+	if migrationsPath == "" {
+		migrationsPath = defaultMigrationsPath
+	}
+
 	environment := os.Getenv("APP_ENV")
 	if environment == "" {
 		environment = defaultEnvironment
@@ -53,6 +60,7 @@ func Load() (Config, error) {
 		ShutdownTimeout:        shutdownTimeout,
 		DatabaseURL:            databaseURL,
 		DatabaseConnectTimeout: databaseConnectTimeout,
+		MigrationsPath:         migrationsPath,
 	}, nil
 }
 
