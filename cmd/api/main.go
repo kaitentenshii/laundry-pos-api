@@ -9,6 +9,7 @@ import (
 
 	"github.com/kaitentenshii/laundry-pos-api/internal/app"
 	"github.com/kaitentenshii/laundry-pos-api/internal/config"
+	"github.com/kaitentenshii/laundry-pos-api/internal/service"
 	"github.com/kaitentenshii/laundry-pos-api/internal/store/postgres"
 )
 
@@ -32,7 +33,12 @@ func main() {
 	defer database.Close()
 	logger.Info("PostgreSQL connection established")
 
-	application := app.New(cfg, logger, database)
+	auth, err := service.NewAuth(postgres.NewAuthStore(database), cfg.AuthSessionTTL)
+	if err != nil {
+		logger.Error("failed to initialize authentication", "error", err)
+		os.Exit(1)
+	}
+	application := app.New(cfg, logger, database, auth)
 	if err := application.Run(ctx); err != nil {
 		logger.Error("application stopped with an error", "error", err)
 		os.Exit(1)

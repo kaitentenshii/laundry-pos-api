@@ -2,8 +2,10 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -21,6 +23,8 @@ type Config struct {
 	DatabaseURL            string
 	DatabaseConnectTimeout time.Duration
 	MigrationsPath         string
+	AuthSessionTTL         time.Duration
+	AllowedOrigins         []string
 }
 
 func Load() (Config, error) {
@@ -53,6 +57,23 @@ func Load() (Config, error) {
 	if environment == "" {
 		environment = defaultEnvironment
 	}
+	authSessionTTL, err := readDuration("AUTH_SESSION_TTL", os.Getenv("AUTH_SESSION_TTL"), 8*time.Hour)
+	if err != nil || authSessionTTL < time.Second || authSessionTTL > 24*time.Hour {
+		return Config{}, fmt.Errorf("AUTH_SESSION_TTL must be between 1 second and 24 hours")
+	}
+	originsValue := os.Getenv("CORS_ALLOWED_ORIGINS")
+	if originsValue == "" {
+		originsValue = "http://localhost:5173,http://127.0.0.1:5173"
+	}
+	var allowedOrigins []string
+	for _, value := range strings.Split(originsValue, ",") {
+		origin := strings.TrimSpace(value)
+		u, err := url.Parse(origin)
+		if err != nil || strings.Contains(origin, "*") || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.Path != "" || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.User != nil {
+			return Config{}, fmt.Errorf("CORS_ALLOWED_ORIGINS must contain comma-separated HTTP/HTTPS origins without paths")
+		}
+		allowedOrigins = append(allowedOrigins, origin)
+	}
 
 	return Config{
 		Environment:            environment,
@@ -61,6 +82,8 @@ func Load() (Config, error) {
 		DatabaseURL:            databaseURL,
 		DatabaseConnectTimeout: databaseConnectTimeout,
 		MigrationsPath:         migrationsPath,
+		AuthSessionTTL:         authSessionTTL,
+		AllowedOrigins:         allowedOrigins,
 	}, nil
 }
 

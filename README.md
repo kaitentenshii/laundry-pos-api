@@ -100,3 +100,78 @@ migrations/       Versioned PostgreSQL schema changes
 go test ./...
 ```
 
+
+## Authentication
+
+Apply migrations before starting the API. Migration `000002` adds users and token sessions.
+
+Create the first administrator (or a cashier) using the local provisioning command. It reads the password from `LAUNDRY_USER_PASSWORD`, hashes it with bcrypt, and never prints or stores the plaintext password. Usernames use 3–64 letters, numbers, dots, underscores, or hyphens. Passwords must contain 12–72 bytes. Roles are `admin` and `cashier`.
+
+```powershell
+$accountPassword = Read-Host 'New account password' -AsSecureString
+$env:LAUNDRY_USER_PASSWORD = [System.Net.NetworkCredential]::new('', $accountPassword).Password
+try {
+    go run ./cmd/create-user -name 'Admin Laundry' -username admin -email admin@laundry.test -role admin
+} finally {
+    Remove-Item Env:LAUNDRY_USER_PASSWORD
+}
+```
+
+Set `DATABASE_URL` before provisioning. There are no default accounts or seeded passwords. Use `-role cashier` to create a cashier.
+
+Additional configuration:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `AUTH_SESSION_TTL` | `8h` | Token lifetime, from 1 second to 24 hours |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated exact frontend origins (no paths or wildcards) |
+
+### Login contract
+
+`POST /auth/login` with `Content-Type: application/json`:
+
+```json
+{"identifier":"admin@laundry.test","password":"<account password>"}
+```
+
+`identifier` accepts a username or email, case-insensitively. Success returns HTTP 200:
+
+```json
+{
+  "access_token": "<opaque random token>",
+  "token_type": "Bearer",
+  "expires_in": 28800,
+  "user": {
+    "id": 1,
+    "name": "Admin Laundry",
+    "username": "admin",
+    "email": "admin@laundry.test",
+    "role": "admin"
+  }
+}
+```
+
+Errors use `{"error":{"code":"...","message":"..."}}`:
+
+- HTTP 400 `invalid_request`: malformed JSON or missing/invalid fields.
+- HTTP 401 `invalid_credentials`: unknown account or incorrect password.
+- HTTP 403 `account_inactive`: correct credentials for an inactive account.
+- HTTP 415 `invalid_content_type`: request must use JSON.
+- HTTP 500 `internal_error`: authentication storage or server failure.
+
+`GET /auth/me` requires `Authorization: Bearer <access_token>` and returns `{"user": {...}}`. Missing, expired, revoked, or inactive-user sessions return HTTP 401 `unauthorized`. Account status and role are read from the database on every protected request.
+
+`POST /auth/logout` requires the same header, revokes that token, and returns HTTP 204. Authentication responses use `Cache-Control: no-store`. Password hashes and account-status internals are excluded from JSON responses.
+
+Tokens contain 32 cryptographically random bytes. PostgreSQL stores only their SHA-256 hashes; no signing secret is required. Expired sessions cannot authenticate. Old session rows may be periodically pruned with `DELETE FROM laundry.auth_sessions WHERE expires_at <= CURRENT_TIMESTAMP`.
+
+### PostgreSQL authentication integration test
+
+Against a separate test database with migrations already applied:
+
+```powershell
+$env:TEST_DATABASE_URL = '<test database connection string>'
+go test ./...
+```
+
+The PostgreSQL integration test inserts its own temporary user and deletes that user and its sessions afterward. Without `TEST_DATABASE_URL`, that integration test is skipped; unit and HTTP tests still run.
