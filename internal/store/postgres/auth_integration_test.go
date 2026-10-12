@@ -67,6 +67,26 @@ func TestPostgresAuthentication(t *testing.T) {
 	if _, err := auth.Login(ctx, username, "incorrect"); !errors.Is(err, service.ErrInvalidCredentials) {
 		t.Fatal("wrong password accepted")
 	}
+	first, err := auth.Login(ctx, username, password)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := auth.Login(ctx, username, password)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.AccessToken == second.AccessToken {
+		t.Fatal("separate logins reused a token")
+	}
+	if err := auth.Logout(ctx, first.AccessToken); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := auth.Authenticate(ctx, first.AccessToken); !errors.Is(err, service.ErrUnauthorized) {
+		t.Fatal("logout failed to revoke its session")
+	}
+	if _, err := auth.Authenticate(ctx, second.AccessToken); err != nil {
+		t.Fatal("logout incorrectly revoked another device session")
+	}
 	result, err := auth.Login(ctx, username, password)
 	if err != nil {
 		t.Fatal(err)

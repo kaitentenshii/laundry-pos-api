@@ -92,6 +92,9 @@ func TestLoginHTTP(t *testing.T) {
 
 func TestProtectedRoutesAndLogout(t *testing.T) {
 	router := authRouter(&authStub{})
+	if response := authRequest(router, "POST", "/auth/logout", "", ""); response.Code != 401 {
+		t.Fatal("logout must require authentication")
+	}
 	for _, token := range []string{"", "wrong"} {
 		response := authRequest(router, "GET", "/auth/me", "", token)
 		if response.Code != 401 || response.Header().Get("WWW-Authenticate") != "Bearer" {
