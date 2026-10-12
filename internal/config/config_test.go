@@ -12,6 +12,8 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://user:password@localhost:5432/test")
 	t.Setenv("DATABASE_CONNECT_TIMEOUT", "")
 	t.Setenv("MIGRATIONS_PATH", "")
+	t.Setenv("AUTH_SESSION_TTL", "")
+	t.Setenv("CORS_ALLOWED_ORIGINS", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -32,6 +34,32 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.MigrationsPath != "file://migrations" {
 		t.Errorf("MigrationsPath = %q, want file://migrations", cfg.MigrationsPath)
+	}
+	if cfg.AuthSessionTTL != 8*time.Hour || len(cfg.AllowedOrigins) != 2 {
+		t.Fatal("unexpected authentication defaults")
+	}
+}
+
+func TestLoadAuthConfiguration(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://user:password@localhost:5432/test")
+	t.Setenv("AUTH_SESSION_TTL", "30m")
+	t.Setenv("CORS_ALLOWED_ORIGINS", "https://laundry.example,http://localhost:5173")
+	cfg, err := Load()
+	if err != nil || cfg.AuthSessionTTL != 30*time.Minute || cfg.AllowedOrigins[0] != "https://laundry.example" {
+		t.Fatalf("invalid auth configuration: %v", err)
+	}
+	for _, value := range []string{"0s", "500ms", "25h", "invalid"} {
+		t.Setenv("AUTH_SESSION_TTL", value)
+		if _, err := Load(); err == nil {
+			t.Fatalf("accepted invalid session duration %s", value)
+		}
+	}
+	t.Setenv("AUTH_SESSION_TTL", "8h")
+	for _, value := range []string{"*", "http://*", "https://laundry.example/path", "file://example", "https://user:password@example.com"} {
+		t.Setenv("CORS_ALLOWED_ORIGINS", value)
+		if _, err := Load(); err == nil {
+			t.Fatal("accepted invalid CORS origin")
+		}
 	}
 }
 

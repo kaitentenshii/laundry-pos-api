@@ -8,10 +8,21 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func NewRouter(logger *slog.Logger, readinessChecker ReadinessChecker) http.Handler {
+type RouterOptions struct {
+	Auth           AuthService
+	AllowedOrigins []string
+}
+
+func NewRouter(logger *slog.Logger, readinessChecker ReadinessChecker, options ...RouterOptions) http.Handler {
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(recoverer(logger))
+	if len(options) > 0 {
+		router.Use(cors(options[0].AllowedOrigins))
+		if options[0].Auth != nil {
+			registerAuthRoutes(router, options[0].Auth, logger)
+		}
+	}
 
 	router.Get("/health", health)
 	router.Get("/ready", readiness(readinessChecker))
