@@ -62,6 +62,10 @@ func registerAuthRoutes(router chi.Router, auth AuthService, logger *slog.Logger
 		protected.Get("/auth/me", func(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]any{"user": r.Context().Value(userContextKey{})})
 		})
+		protected.Get("/auth/permissions", func(w http.ResponseWriter, r *http.Request) {
+			user, _ := requestUser(r)
+			writeJSON(w, http.StatusOK, map[string]any{"role": user.Role, "permissions": rolePermissions(user.Role)})
+		})
 		protected.Post("/auth/logout", func(w http.ResponseWriter, r *http.Request) {
 			if err := auth.Logout(r.Context(), bearerToken(r)); err != nil {
 				logger.Error("logout failed", "error", err)

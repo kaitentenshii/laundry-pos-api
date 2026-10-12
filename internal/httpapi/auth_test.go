@@ -95,6 +95,9 @@ func TestProtectedRoutesAndLogout(t *testing.T) {
 	if response := authRequest(router, "POST", "/auth/logout", "", ""); response.Code != 401 {
 		t.Fatal("logout must require authentication")
 	}
+	if response := authRequest(router, "GET", "/auth/permissions", "", "valid-token"); response.Code != 200 || !strings.Contains(response.Body.String(), "users:manage") {
+		t.Fatal("authenticated permissions endpoint failed")
+	}
 	for _, token := range []string{"", "wrong"} {
 		response := authRequest(router, "GET", "/auth/me", "", token)
 		if response.Code != 401 || response.Header().Get("WWW-Authenticate") != "Bearer" {

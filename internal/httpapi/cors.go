@@ -24,7 +24,7 @@ func cors(origins []string) func(http.Handler) http.Handler {
 					w.Header().Add("Vary", "Access-Control-Request-Method")
 					w.Header().Add("Vary", "Access-Control-Request-Headers")
 					requestedMethod := r.Header.Get("Access-Control-Request-Method")
-					if requestedMethod != "GET" && requestedMethod != "POST" {
+					if requestedMethod != "GET" && requestedMethod != "POST" && requestedMethod != "PUT" && requestedMethod != "PATCH" {
 						writeError(w, http.StatusForbidden, "method_not_allowed", "This method is not allowed.")
 						return
 					}
@@ -35,7 +35,7 @@ func cors(origins []string) func(http.Handler) http.Handler {
 							return
 						}
 					}
-					w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+					w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, OPTIONS")
 					w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 					w.WriteHeader(http.StatusNoContent)
 					return
