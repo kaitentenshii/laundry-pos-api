@@ -93,6 +93,7 @@ func ItemSubtotal(price, milli int64) (int64, error) {
 }
 func (s *Orders) Create(ctx context.Context, actor int64, input OrderInput) (Order, error) {
 	input.Notes = strings.TrimSpace(input.Notes)
+	input.Items = append([]OrderItemInput(nil), input.Items...)
 	if input.ExpectedTotal != nil && (*input.ExpectedTotal < 0 || *input.ExpectedTotal > MaxOrderTotal) {
 		return Order{}, Invalid("expected_total", "Total tidak valid.")
 	}
