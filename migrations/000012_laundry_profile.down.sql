@@ -1,0 +1,1 @@
+DROP TABLE laundry.profile;
