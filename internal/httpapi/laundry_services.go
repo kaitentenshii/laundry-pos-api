@@ -10,6 +10,7 @@ import (
 )
 
 type LaundryServiceManager interface {
+	SetActive(context.Context, int64, *bool) (service.LaundryService, error)
 	Prices(context.Context, int64) ([]service.ServicePriceVersion, error)
 	List(context.Context, bool) ([]service.LaundryService, error)
 	Create(context.Context, service.LaundryServiceInput) (service.LaundryService, error)
@@ -41,6 +42,26 @@ func registerLaundryServiceRoutes(router chi.Router, auth AuthService, manager L
 		})
 		r.Group(func(r chi.Router) {
 			r.Use(requireRoles("admin"))
+			r.Patch("/services/{id}/status", func(w http.ResponseWriter, r *http.Request) {
+				id, ok := resourceID(w, r)
+				if !ok {
+					return
+				}
+				var input struct {
+					IsActive *bool `json:"is_active"`
+				}
+				if !decodeInput(w, r, &input) {
+					return
+				}
+				ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+				defer cancel()
+				data, err := manager.SetActive(ctx, id, input.IsActive)
+				if err != nil {
+					managementError(w, logger, err)
+					return
+				}
+				writeJSON(w, 200, map[string]any{"data": data})
+			})
 			r.Get("/services/{id}/prices", func(w http.ResponseWriter, r *http.Request) {
 				id, ok := resourceID(w, r)
 				if !ok {

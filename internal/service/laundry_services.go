@@ -29,8 +29,16 @@ type LaundryServiceStore interface {
 	ListServices(context.Context, bool) ([]LaundryService, error)
 	SaveService(context.Context, int64, LaundryService) (LaundryService, error)
 	ListPriceVersions(context.Context, int64) ([]ServicePriceVersion, error)
+	SetServiceActive(context.Context, int64, bool) (LaundryService, error)
 }
 type LaundryServices struct{ store LaundryServiceStore }
+
+func (s *LaundryServices) SetActive(ctx context.Context, id int64, active *bool) (LaundryService, error) {
+	if active == nil {
+		return LaundryService{}, Invalid("is_active", "Pilih status aktif atau nonaktif.")
+	}
+	return s.store.SetServiceActive(ctx, id, *active)
+}
 
 type ServicePriceVersion struct {
 	ID             int64     `json:"id"`

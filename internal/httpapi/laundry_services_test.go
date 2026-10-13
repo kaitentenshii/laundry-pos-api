@@ -10,6 +10,13 @@ import (
 
 type laundryServiceStub struct{ activeOnly bool }
 
+func (*laundryServiceStub) SetActive(_ context.Context, id int64, active *bool) (service.LaundryService, error) {
+	if active == nil {
+		return service.LaundryService{}, service.Invalid("is_active", "Status diperlukan.")
+	}
+	return service.LaundryService{ID: id, IsActive: *active}, nil
+}
+
 func (*laundryServiceStub) Prices(context.Context, int64) ([]service.ServicePriceVersion, error) {
 	return []service.ServicePriceVersion{}, nil
 }
@@ -30,6 +37,19 @@ func TestLaundryServiceRoles(t *testing.T) {
 		router := NewRouter(slog.New(slog.NewTextHandler(io.Discard, nil)), readinessStub{}, RouterOptions{Auth: &authRoleStub{role: role}, Services: manager})
 		if authRequest(router, "GET", "/services?active=false", "", "valid-token").Code != 200 || manager.activeOnly != (role == "cashier") {
 			t.Fatal("cashier bypassed active filter")
+		}
+		want := 200
+		if role == "cashier" {
+			want = 403
+		}
+		if authRequest(router, "PATCH", "/services/1/status", `{"is_active":false}`, "valid-token").Code != want {
+			t.Fatal("status role restriction failed")
+		}
+		if authRequest(router, "GET", "/services/1/prices", "", "valid-token").Code != want {
+			t.Fatal("price history role restriction failed")
+		}
+		if role == "admin" && authRequest(router, "PATCH", "/services/1/status", `{}`, "valid-token").Code != 400 {
+			t.Fatal("missing status accepted")
 		}
 		for _, method := range []string{"POST", "PUT"} {
 			path := "/services"

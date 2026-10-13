@@ -11,6 +11,10 @@ import (
 
 type LaundryServiceStore struct{ pool *pgxpool.Pool }
 
+func (s *LaundryServiceStore) SetServiceActive(ctx context.Context, id int64, active bool) (service.LaundryService, error) {
+	return scanService(s.pool.QueryRow(ctx, `UPDATE laundry.services SET is_active=$2,updated_at=now() WHERE id=$1 RETURNING `+serviceColumns, id, active))
+}
+
 func NewLaundryServiceStore(pool *pgxpool.Pool) *LaundryServiceStore {
 	return &LaundryServiceStore{pool}
 }
