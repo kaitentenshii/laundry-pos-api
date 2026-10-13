@@ -22,6 +22,7 @@ func New(cfg config.Config, logger *slog.Logger, readinessChecker httpapi.Readin
 	if len(extra) > 0 {
 		options.Dashboard = extra[0].Dashboard
 		options.Reports = extra[0].Reports
+		options.Profile = extra[0].Profile
 	}
 	return &App{
 		config: cfg,
