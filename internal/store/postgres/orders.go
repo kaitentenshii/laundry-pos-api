@@ -27,6 +27,10 @@ func scanOrder(row pgx.Row) (service.Order, error) {
 	if errors.Is(err, pgx.ErrNoRows) {
 		return o, service.ErrNotFound
 	}
+	if o.PaymentStatus == "PAID" {
+		o.PaidAmount = o.Total
+	}
+	o.Balance = o.Total - o.PaidAmount
 	return o, err
 }
 func readOrder(ctx context.Context, q orderQuerier, id int64) (service.Order, error) {
