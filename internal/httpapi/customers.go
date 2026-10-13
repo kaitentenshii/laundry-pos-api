@@ -12,12 +12,31 @@ import (
 type CustomerService interface {
 	List(context.Context) ([]service.Customer, error)
 	Create(context.Context, service.CustomerInput) (service.Customer, error)
+	Update(context.Context, int64, service.CustomerInput) (service.Customer, error)
 }
 
 func registerCustomerRoutes(router chi.Router, auth AuthService, customers CustomerService, logger *slog.Logger) {
 	router.Group(func(r chi.Router) {
 		r.Use(requireAuth(auth, logger))
 		r.Use(requireRoles("admin", "cashier"))
+		r.Put("/customers/{id}", func(w http.ResponseWriter, r *http.Request) {
+			id, ok := resourceID(w, r)
+			if !ok {
+				return
+			}
+			var input service.CustomerInput
+			if !decodeInput(w, r, &input) {
+				return
+			}
+			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+			defer cancel()
+			data, err := customers.Update(ctx, id, input)
+			if err != nil {
+				managementError(w, logger, err)
+				return
+			}
+			writeJSON(w, 200, map[string]any{"data": data})
+		})
 		r.Get("/customers", func(w http.ResponseWriter, r *http.Request) {
 			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 			defer cancel()
