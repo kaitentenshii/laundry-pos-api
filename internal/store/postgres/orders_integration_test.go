@@ -95,6 +95,13 @@ func TestOrderCreationPostgres(t *testing.T) {
 	if count != 1 {
 		t.Fatal("failed request persisted partial order")
 	}
+	contact, err := NewCustomerStore(f.pool).GetCustomer(ctx, f.customer)
+	if err != nil || contact.OrderCount != 1 {
+		t.Fatal("customer count not derived from orders", err)
+	}
+	if order.CreatorName != "Order tester" || order.CustomerWhatsapp != "+6281234567890" || order.Balance != 32000 || order.PaidAmount != 0 || order.Notes != "Tanpa pewangi" {
+		t.Fatal("detail fields incomplete")
+	}
 }
 
 func TestMultipleOrderServicesPostgres(t *testing.T) {

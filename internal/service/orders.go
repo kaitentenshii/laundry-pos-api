@@ -48,6 +48,8 @@ type Order struct {
 	Status           string      `json:"status"`
 	PaymentStatus    string      `json:"payment_status"`
 	Total            int64       `json:"total"`
+	PaidAmount       int64       `json:"paid_amount"`
+	Balance          int64       `json:"balance"`
 	CreatedAt        time.Time   `json:"created_at"`
 	UpdatedAt        time.Time   `json:"updated_at"`
 	Items            []OrderItem `json:"items"`

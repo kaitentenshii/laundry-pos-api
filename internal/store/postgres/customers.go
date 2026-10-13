@@ -17,11 +17,11 @@ func (s *CustomerStore) GetCustomer(ctx context.Context, id int64) (service.Cust
 	return scanCustomer(s.pool.QueryRow(ctx, `SELECT `+customerColumns+` FROM laundry.customers WHERE id=$1`, id))
 }
 
-const customerColumns = `id,name,whatsapp,address,notes,whatsapp_opt_in,created_at,updated_at`
+const customerColumns = `id,name,whatsapp,address,notes,whatsapp_opt_in,created_at,updated_at,(SELECT count(*) FROM laundry.orders WHERE customer_id=laundry.customers.id)`
 
 func scanCustomer(row pgx.Row) (service.Customer, error) {
 	var c service.Customer
-	err := row.Scan(&c.ID, &c.Name, &c.Whatsapp, &c.Address, &c.Notes, &c.WhatsappOptIn, &c.CreatedAt, &c.UpdatedAt)
+	err := row.Scan(&c.ID, &c.Name, &c.Whatsapp, &c.Address, &c.Notes, &c.WhatsappOptIn, &c.CreatedAt, &c.UpdatedAt, &c.OrderCount)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return c, service.ErrNotFound
 	}
