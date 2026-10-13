@@ -11,13 +11,14 @@ var ErrPaymentRequired = errors.New("Pesanan harus selesai dan lunas sebelum dia
 var ErrStaleOrder = errors.New("Status pesanan sudah berubah. Muat ulang detail pesanan.")
 
 type OrderStatusHistory struct {
-	ID         int64     `json:"id"`
-	OrderID    int64     `json:"order_id"`
-	FromStatus string    `json:"from_status"`
-	ToStatus   string    `json:"to_status"`
-	ChangedBy  int64     `json:"changed_by"`
-	ActorName  string    `json:"actor_name"`
-	ChangedAt  time.Time `json:"changed_at"`
+	ID                int64     `json:"id"`
+	OrderID           int64     `json:"order_id"`
+	FromStatus        string    `json:"from_status"`
+	ToStatus          string    `json:"to_status"`
+	ChangedBy         int64     `json:"changed_by"`
+	ActorName         string    `json:"actor_name"`
+	ChangedAt         time.Time `json:"changed_at"`
+	HandoverConfirmed bool      `json:"handover_confirmed"`
 }
 
 func (s *Orders) History(ctx context.Context, id int64) ([]OrderStatusHistory, error) {
@@ -25,9 +26,10 @@ func (s *Orders) History(ctx context.Context, id int64) ([]OrderStatusHistory, e
 }
 
 type OrderStatusInput struct {
-	FromStatus string `json:"from_status"`
-	Status     string `json:"status"`
-	RequestKey string `json:"request_key"`
+	FromStatus        string `json:"from_status"`
+	Status            string `json:"status"`
+	RequestKey        string `json:"request_key"`
+	HandoverConfirmed bool   `json:"handover_confirmed"`
 }
 
 func ValidateOrderTransition(from, to, payment string) error {
@@ -49,6 +51,9 @@ func AllowedOrderTransitions(status, payment string) []string {
 	return []string{next}
 }
 func (s *Orders) Transition(ctx context.Context, actor, id int64, input OrderStatusInput) (Order, error) {
+	if input.Status == "PICKED_UP" && !input.HandoverConfirmed {
+		return Order{}, Invalid("handover_confirmed", "Konfirmasi seluruh cucian telah diserahkan kepada pelanggan.")
+	}
 	if !requestKeyPattern.MatchString(input.RequestKey) {
 		return Order{}, Invalid("request_key", "Kunci permintaan tidak valid.")
 	}

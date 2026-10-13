@@ -9,7 +9,7 @@ import (
 )
 
 func readOrderHistory(ctx context.Context, q orderQuerier, id int64) ([]service.OrderStatusHistory, error) {
-	rows, err := q.Query(ctx, `SELECT id,order_id,COALESCE(from_status,''),to_status,changed_by,actor_name,changed_at FROM laundry.order_status_history WHERE order_id=$1 ORDER BY id DESC`, id)
+	rows, err := q.Query(ctx, `SELECT id,order_id,COALESCE(from_status,''),to_status,changed_by,actor_name,changed_at,handover_confirmed FROM laundry.order_status_history WHERE order_id=$1 ORDER BY id DESC`, id)
 	if err != nil {
 		return nil, err
 	}
@@ -17,7 +17,7 @@ func readOrderHistory(ctx context.Context, q orderQuerier, id int64) ([]service.
 	data := make([]service.OrderStatusHistory, 0)
 	for rows.Next() {
 		var event service.OrderStatusHistory
-		if err := rows.Scan(&event.ID, &event.OrderID, &event.FromStatus, &event.ToStatus, &event.ChangedBy, &event.ActorName, &event.ChangedAt); err != nil {
+		if err := rows.Scan(&event.ID, &event.OrderID, &event.FromStatus, &event.ToStatus, &event.ChangedBy, &event.ActorName, &event.ChangedAt, &event.HandoverConfirmed); err != nil {
 			return nil, err
 		}
 		data = append(data, event)
@@ -74,7 +74,7 @@ func (s *OrderStore) TransitionOrder(ctx context.Context, actor, id int64, input
 	if _, err := tx.Exec(ctx, `UPDATE laundry.orders SET status=$2,updated_at=$3 WHERE id=$1`, id, input.Status, changedAt); err != nil {
 		return service.Order{}, err
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO laundry.order_status_history(order_id,from_status,to_status,changed_by,actor_name,changed_at,request_key) SELECT $1,$2,$3,$4,name,$5,$6 FROM laundry.users WHERE id=$4`, id, current, input.Status, actor, changedAt, input.RequestKey); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO laundry.order_status_history(order_id,from_status,to_status,changed_by,actor_name,changed_at,request_key,handover_confirmed) SELECT $1,$2,$3,$4,name,$5,$6,$7 FROM laundry.users WHERE id=$4`, id, current, input.Status, actor, changedAt, input.RequestKey, input.HandoverConfirmed); err != nil {
 		return service.Order{}, err
 	}
 	o, err := readOrder(ctx, tx, id)

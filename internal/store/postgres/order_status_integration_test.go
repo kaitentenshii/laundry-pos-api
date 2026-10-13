@@ -73,7 +73,7 @@ func TestInvalidTransitionsDoNotMutateOrder(t *testing.T) {
 	if _, err := f.manager.Transition(ctx, f.actor, order.ID, service.OrderStatusInput{FromStatus: "WASHING", Status: "COMPLETED", RequestKey: "valid_complete_12345678"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.manager.Transition(ctx, f.actor, order.ID, service.OrderStatusInput{FromStatus: "COMPLETED", Status: "PICKED_UP", RequestKey: "unpaid_pickup_123456789"}); !errors.Is(err, service.ErrPaymentRequired) {
+	if _, err := f.manager.Transition(ctx, f.actor, order.ID, service.OrderStatusInput{FromStatus: "COMPLETED", Status: "PICKED_UP", RequestKey: "unpaid_pickup_123456789", HandoverConfirmed: true}); !errors.Is(err, service.ErrPaymentRequired) {
 		t.Fatal("unpaid pickup accepted", err)
 	}
 	detail, err := f.manager.Get(ctx, order.ID)
