@@ -187,3 +187,8 @@ Username-only accounts have no email; email accounts receive a unique internal u
 Passwords/hashes are never returned. Disabling an account or changing its role revokes all that account's sessions; reactivation does not restore old tokens. The current admin cannot demote/deactivate itself, and the final active administrator is protected. Account records are preserved for future transaction references.
 
 Migration `000003` allows username-only accounts and tracks last activity. Before rolling it back, assign email addresses to all username-only accounts; rollback refuses to invent login identities or discard them.
+
+### Customers
+
+Authenticated admins and cashiers can `GET /customers` and `POST /customers`.
+Create JSON: `name`, `whatsapp`, optional `address` and `notes`, and `whatsapp_opt_in` (defaults to false). Local Indonesian `08...` numbers normalize to `+628...`; international numbers use E.164 with 8–15 digits. Shared household phone numbers are allowed. Name is limited to 120 characters, address to 1000, and notes to 2000. Run migration 000004 before starting the API. Consent is stored only; WhatsApp delivery is configured manually and is not triggered by customer registration.
