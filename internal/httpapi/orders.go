@@ -11,6 +11,7 @@ import (
 )
 
 type OrderManager interface {
+	Pay(context.Context, int64, int64, service.PaymentInput) (service.Payment, error)
 	List(context.Context, service.OrderQuery) (service.OrderList, error)
 	Create(context.Context, int64, service.OrderInput) (service.Order, error)
 	Get(context.Context, int64) (service.Order, error)
@@ -20,6 +21,25 @@ func registerOrderRoutes(router chi.Router, auth AuthService, orders OrderManage
 	router.Group(func(r chi.Router) {
 		r.Use(requireAuth(auth, logger))
 		r.Use(requireRoles("admin", "cashier"))
+		r.Post("/orders/{id}/payments", func(w http.ResponseWriter, r *http.Request) {
+			id, ok := resourceID(w, r)
+			if !ok {
+				return
+			}
+			var input service.PaymentInput
+			if !decodeInput(w, r, &input) {
+				return
+			}
+			actor, _ := requestUser(r)
+			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+			defer cancel()
+			data, err := orders.Pay(ctx, actor.ID, id, input)
+			if err != nil {
+				managementError(w, logger, err)
+				return
+			}
+			writeJSON(w, 201, map[string]any{"data": data})
+		})
 		r.Get("/orders", func(w http.ResponseWriter, r *http.Request) {
 			values := r.URL.Query()
 			q := service.OrderQuery{Search: values.Get("q"), Status: values.Get("status"), PaymentStatus: values.Get("payment_status"), FromDate: values.Get("from"), ToDate: values.Get("to")}
