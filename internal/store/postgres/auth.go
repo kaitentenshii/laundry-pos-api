@@ -30,16 +30,35 @@ func (s *AuthStore) FindUser(ctx context.Context, identifier string) (service.Us
 	if strings.Contains(identifier, "@") {
 		column = "email"
 	}
-	return scanUser(s.pool.QueryRow(ctx, `SELECT id, name, username, email, role, password_hash, is_active FROM laundry.users WHERE lower(`+column+`) = lower($1)`, identifier))
+	return scanUser(s.pool.QueryRow(ctx, `SELECT id, name, username, COALESCE(email,''), role, password_hash, is_active FROM laundry.users WHERE lower(`+column+`) = lower($1)`, identifier))
 }
 
 func (s *AuthStore) CreateSession(ctx context.Context, hash []byte, userID int64, expiry time.Time) error {
-	_, err := s.pool.Exec(ctx, `INSERT INTO laundry.auth_sessions (token_hash, user_id, expires_at) VALUES ($1, $2, $3)`, hash, userID, expiry)
-	return err
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, `INSERT INTO laundry.auth_sessions (token_hash,user_id,expires_at) VALUES($1,$2,$3)`, hash, userID, expiry); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE laundry.users SET last_active_at=CURRENT_TIMESTAMP WHERE id=$1`, userID); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 func (s *AuthStore) SessionUser(ctx context.Context, hash []byte, now time.Time) (service.User, error) {
-	return scanUser(s.pool.QueryRow(ctx, `SELECT u.id, u.name, u.username, u.email, u.role, u.password_hash, u.is_active FROM laundry.auth_sessions s JOIN laundry.users u ON u.id = s.user_id WHERE s.token_hash = $1 AND s.expires_at > $2`, hash, now))
+	u, err := scanUser(s.pool.QueryRow(ctx, `SELECT u.id, u.name, u.username, COALESCE(u.email,''), u.role, u.password_hash, u.is_active FROM laundry.auth_sessions s JOIN laundry.users u ON u.id = s.user_id WHERE s.token_hash = $1 AND s.expires_at > $2`, hash, now))
+	if err != nil {
+		return u, err
+	}
+	if u.IsActive {
+		if _, err := s.pool.Exec(ctx, `UPDATE laundry.users SET last_active_at=$2::timestamptz WHERE id=$1 AND is_active AND (last_active_at IS NULL OR last_active_at < $2::timestamptz - INTERVAL '1 minute')`, u.ID, now); err != nil {
+			return service.User{}, err
+		}
+	}
+	return u, nil
 }
 
 func (s *AuthStore) DeleteSession(ctx context.Context, hash []byte) error {

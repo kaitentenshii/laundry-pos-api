@@ -38,7 +38,8 @@ func main() {
 		logger.Error("failed to initialize authentication", "error", err)
 		os.Exit(1)
 	}
-	application := app.New(cfg, logger, database, auth)
+	accounts := service.NewAccounts(postgres.NewAccountStore(database))
+	application := app.New(cfg, logger, database, auth, accounts)
 	if err := application.Run(ctx); err != nil {
 		logger.Error("application stopped with an error", "error", err)
 		os.Exit(1)
