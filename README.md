@@ -197,3 +197,7 @@ Create JSON: `name`, `whatsapp`, optional `address` and `notes`, and `whatsapp_o
 Customer list accepts `q` (literal case-insensitive name or normalized phone substring), `consent=true|false`, `page` (default 1), and `page_size` (default 20, maximum 100). Returns `{data,total,page,page_size}` with consistent totals and deterministic newest-first ordering. Search metacharacters are treated literally.
 
 `GET /customers/{id}` returns the current customer profile or 404. `order_count` is zero until Sprint 2 order storage is implemented. Frontend detail links preserve `customer_id` when navigating to the future order creation route.
+
+### Laundry services
+
+Admins manage `POST /services` and `PUT /services/{id}` with `name`, `unit` (`KG` or `ITEM`), integer rupiah `price` (0–999999999), `estimated_hours` (1–8760), and `is_active`. Create defaults to active; updates require an explicit status. `GET /services` allows admins and cashiers; cashier responses always exclude inactive records, even with `active=false`. UI labels KG as kg and ITEM as pcs; 24 hours equals one day. Migration 000005 is required. IDs remain stable and services are never hard-deleted through the API.
