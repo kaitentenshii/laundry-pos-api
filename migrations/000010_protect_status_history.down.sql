@@ -1,0 +1,4 @@
+DROP TRIGGER status_history_immutable ON laundry.order_status_history;
+DROP FUNCTION laundry.reject_status_history_update();
+ALTER TABLE laundry.order_status_history DROP CONSTRAINT status_history_valid_sequence;
+DROP INDEX laundry.order_status_history_once_per_state;
