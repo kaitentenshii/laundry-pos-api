@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kaitentenshii/laundry-pos-api/internal/service"
 	"os"
+	"sync"
 	"testing"
 	"time"
 )
@@ -140,5 +141,56 @@ func TestServerVerifiesPresentedOrderTotal(t *testing.T) {
 	order, err := f.manager.Create(ctx, f.actor, input)
 	if err != nil || order.Total != expected {
 		t.Fatal("matching total rejected", err)
+	}
+}
+
+func TestConcurrentUniqueOrderNumbersAndRetries(t *testing.T) {
+	f := setupOrders(t)
+	ctx := context.Background()
+	base := f.input("concurrent_order_123456")
+	type result struct {
+		order service.Order
+		err   error
+	}
+	results := make(chan result, 12)
+	var wg sync.WaitGroup
+	for i := 0; i < 12; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			input := base
+			input.RequestKey = fmt.Sprintf("concurrent_number_%016d", i)
+			o, err := f.manager.Create(ctx, f.actor, input)
+			results <- result{o, err}
+		}(i)
+	}
+	wg.Wait()
+	close(results)
+	seen := map[string]bool{}
+	for r := range results {
+		if r.err != nil {
+			t.Fatal(r.err)
+		}
+		if seen[r.order.Number] || r.order.Number == "" {
+			t.Fatal("duplicate order number")
+		}
+		seen[r.order.Number] = true
+	}
+	results = make(chan result, 8)
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() { defer wg.Done(); o, err := f.manager.Create(ctx, f.actor, base); results <- result{o, err} }()
+	}
+	wg.Wait()
+	close(results)
+	var id int64
+	for r := range results {
+		if r.err != nil {
+			t.Fatal(r.err)
+		}
+		if id != 0 && r.order.ID != id {
+			t.Fatal("concurrent retry created another order")
+		}
+		id = r.order.ID
 	}
 }
