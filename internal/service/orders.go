@@ -53,6 +53,7 @@ type Order struct {
 	Items            []OrderItem `json:"items"`
 }
 type OrderStore interface {
+	ListOrders(context.Context, OrderQuery) (OrderList, error)
 	InsertOrder(context.Context, int64, OrderInput, string) (Order, error)
 	GetOrder(context.Context, int64) (Order, error)
 }

@@ -194,3 +194,33 @@ func TestConcurrentUniqueOrderNumbersAndRetries(t *testing.T) {
 		id = r.order.ID
 	}
 }
+
+func TestOrderListFiltersAndPagination(t *testing.T) {
+	f := setupOrders(t)
+	ctx := context.Background()
+	input := f.input("order_list_filter_123456")
+	created, err := f.manager.Create(ctx, f.actor, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.pool.Exec(ctx, `UPDATE laundry.orders SET status='COMPLETED',payment_status='PAID',created_at='2050-01-02T23:59:00+07:00' WHERE id=$1`, created.ID); err != nil {
+		t.Fatal(err)
+	}
+	list, err := f.manager.List(ctx, service.OrderQuery{Status: "COMPLETED", PaymentStatus: "PAID", FromDate: "2050-01-02", ToDate: "2050-01-02", PageSize: 1})
+	if err != nil || list.Total != 1 || len(list.Data) != 1 || list.Data[0].ID != created.ID || len(list.Data[0].Items) != 1 {
+		t.Fatal("combined filters failed", err)
+	}
+	list, err = f.manager.List(ctx, service.OrderQuery{FromDate: "2050-01-03", ToDate: "2050-01-03"})
+	if err != nil || list.Total != 0 {
+		t.Fatal("inclusive local date boundaries failed", err)
+	}
+	list, err = f.manager.List(ctx, service.OrderQuery{FromDate: "2050-01-02", ToDate: "2050-01-02", Page: 2, PageSize: 1})
+	if err != nil || list.Total != 1 || len(list.Data) != 0 {
+		t.Fatal("pagination totals failed", err)
+	}
+	for _, q := range []service.OrderQuery{{Status: "INVALID"}, {PaymentStatus: "INVALID"}, {FromDate: "bad"}, {FromDate: "2050-01-03", ToDate: "2050-01-02"}, {PageSize: 101}} {
+		if _, err := f.manager.List(ctx, q); err == nil {
+			t.Fatal("invalid list query accepted")
+		}
+	}
+}

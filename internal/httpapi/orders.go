@@ -6,10 +6,12 @@ import (
 	"github.com/kaitentenshii/laundry-pos-api/internal/service"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 )
 
 type OrderManager interface {
+	List(context.Context, service.OrderQuery) (service.OrderList, error)
 	Create(context.Context, int64, service.OrderInput) (service.Order, error)
 	Get(context.Context, int64) (service.Order, error)
 }
@@ -18,6 +20,28 @@ func registerOrderRoutes(router chi.Router, auth AuthService, orders OrderManage
 	router.Group(func(r chi.Router) {
 		r.Use(requireAuth(auth, logger))
 		r.Use(requireRoles("admin", "cashier"))
+		r.Get("/orders", func(w http.ResponseWriter, r *http.Request) {
+			values := r.URL.Query()
+			q := service.OrderQuery{Status: values.Get("status"), PaymentStatus: values.Get("payment_status"), FromDate: values.Get("from"), ToDate: values.Get("to")}
+			for key, target := range map[string]*int{"page": &q.Page, "page_size": &q.PageSize} {
+				if value := values.Get(key); value != "" {
+					parsed, err := strconv.Atoi(value)
+					if err != nil || parsed < 1 {
+						managementError(w, logger, service.Invalid(key, "Pagination tidak valid."))
+						return
+					}
+					*target = parsed
+				}
+			}
+			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+			defer cancel()
+			data, err := orders.List(ctx, q)
+			if err != nil {
+				managementError(w, logger, err)
+				return
+			}
+			writeJSON(w, 200, data)
+		})
 		r.Post("/orders", func(w http.ResponseWriter, r *http.Request) {
 			var input service.OrderInput
 			if !decodeInput(w, r, &input) {
