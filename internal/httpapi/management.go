@@ -50,6 +50,8 @@ func managementError(w http.ResponseWriter, logger *slog.Logger, err error) {
 		writeError(w, 409, "conflict", "Username atau email sudah digunakan.")
 	case errors.Is(err, service.ErrAlreadyPaid):
 		writeError(w, 409, "conflict", err.Error())
+	case errors.Is(err, service.ErrInvalidTransition), errors.Is(err, service.ErrPaymentRequired), errors.Is(err, service.ErrStaleOrder):
+		writeError(w, 409, "conflict", err.Error())
 	case errors.Is(err, service.ErrSelfLockout), errors.Is(err, service.ErrLastAdmin):
 		writeError(w, 409, "conflict", err.Error())
 	default:

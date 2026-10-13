@@ -56,6 +56,7 @@ type Order struct {
 	Payment          *Payment    `json:"payment,omitempty"`
 }
 type OrderStore interface {
+	TransitionOrder(context.Context, int64, int64, OrderStatusInput) (Order, error)
 	InsertPayment(context.Context, int64, int64, PaymentInput, string) (Payment, error)
 	ListOrders(context.Context, OrderQuery) (OrderList, error)
 	InsertOrder(context.Context, int64, OrderInput, string) (Order, error)

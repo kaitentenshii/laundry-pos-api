@@ -156,6 +156,9 @@ func (s *OrderStore) InsertOrder(ctx context.Context, actor int64, input service
 			return service.Order{}, err
 		}
 	}
+	if _, err := tx.Exec(ctx, `INSERT INTO laundry.order_status_history(order_id,to_status,changed_by,actor_name,changed_at,request_key) SELECT o.id,'RECEIVED',o.created_by,u.name,o.created_at,'created:'||o.id::text FROM laundry.orders o JOIN laundry.users u ON u.id=o.created_by WHERE o.id=$1`, id); err != nil {
+		return service.Order{}, err
+	}
 	o, err := readOrder(ctx, tx, id)
 	if err != nil {
 		return o, err

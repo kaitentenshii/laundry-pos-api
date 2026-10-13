@@ -224,3 +224,7 @@ Order list q searches order number and the transaction customer-name snapshot ca
 
 Migration 000008 adds one full settlement per order. POST /orders/{id}/payments accepts method CASH/TRANSFER/QRIS, integer amount_received, RFC3339 paid_at, optional notes, confirmed (required true for TRANSFER/QRIS), and request_key. Underpayment is rejected. Cash change equals received minus the full balance; noncash change is zero. Payment row and PAID status commit atomically while laundry status stays unchanged. Replaying the same request returns the same payment; a different request after settlement returns 409. The order row lock and unique order_id protect concurrent requests. Future payment dates and dates before order creation are rejected.
 Paid amounts in list/detail are derived from persisted settlements. Laundry status and payment status remain independent; detail includes the payment receipt for method, time, recorder, received funds, settlement, and cash change.
+
+### Laundry status
+
+Migration 000009 adds history and initial RECEIVED records. PATCH /orders/{id}/status accepts from_status, status, request_key. Allowed sequence is RECEIVED -> WASHING -> COMPLETED -> PICKED_UP, with PAID required for pickup. Orders are locked; stale expected states, jumps, and reversals return 409. A successful transition updates the order and inserts actor/status/time history atomically. Identical retries create no extra history. WhatsApp delivery is manual/outside this scope and never blocks status changes.

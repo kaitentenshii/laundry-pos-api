@@ -11,6 +11,7 @@ import (
 )
 
 type OrderManager interface {
+	Transition(context.Context, int64, int64, service.OrderStatusInput) (service.Order, error)
 	Pay(context.Context, int64, int64, service.PaymentInput) (service.Payment, error)
 	List(context.Context, service.OrderQuery) (service.OrderList, error)
 	Create(context.Context, int64, service.OrderInput) (service.Order, error)
@@ -21,6 +22,25 @@ func registerOrderRoutes(router chi.Router, auth AuthService, orders OrderManage
 	router.Group(func(r chi.Router) {
 		r.Use(requireAuth(auth, logger))
 		r.Use(requireRoles("admin", "cashier"))
+		r.Patch("/orders/{id}/status", func(w http.ResponseWriter, r *http.Request) {
+			id, ok := resourceID(w, r)
+			if !ok {
+				return
+			}
+			var input service.OrderStatusInput
+			if !decodeInput(w, r, &input) {
+				return
+			}
+			actor, _ := requestUser(r)
+			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+			defer cancel()
+			data, err := orders.Transition(ctx, actor.ID, id, input)
+			if err != nil {
+				managementError(w, logger, err)
+				return
+			}
+			writeJSON(w, 200, map[string]any{"data": data})
+		})
 		r.Post("/orders/{id}/payments", func(w http.ResponseWriter, r *http.Request) {
 			id, ok := resourceID(w, r)
 			if !ok {
