@@ -19,16 +19,13 @@ type orderQuerier interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
 }
 
-const orderColumns = `o.id,o.order_number,o.customer_id,o.customer_name,o.customer_whatsapp,o.customer_opt_in,o.created_by,u.name,o.due_at,o.notes,o.status,o.payment_status,o.total,o.created_at,o.updated_at`
+const orderColumns = `o.id,o.order_number,o.customer_id,o.customer_name,o.customer_whatsapp,o.customer_opt_in,o.created_by,u.name,o.due_at,o.notes,o.status,o.payment_status,o.total,o.created_at,o.updated_at,(SELECT COALESCE(sum(p.amount_settled),0) FROM laundry.payments p WHERE p.order_id=o.id)`
 
 func scanOrder(row pgx.Row) (service.Order, error) {
 	var o service.Order
-	err := row.Scan(&o.ID, &o.Number, &o.CustomerID, &o.CustomerName, &o.CustomerWhatsapp, &o.CustomerOptIn, &o.CreatedBy, &o.CreatorName, &o.DueAt, &o.Notes, &o.Status, &o.PaymentStatus, &o.Total, &o.CreatedAt, &o.UpdatedAt)
+	err := row.Scan(&o.ID, &o.Number, &o.CustomerID, &o.CustomerName, &o.CustomerWhatsapp, &o.CustomerOptIn, &o.CreatedBy, &o.CreatorName, &o.DueAt, &o.Notes, &o.Status, &o.PaymentStatus, &o.Total, &o.CreatedAt, &o.UpdatedAt, &o.PaidAmount)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return o, service.ErrNotFound
-	}
-	if o.PaymentStatus == "PAID" {
-		o.PaidAmount = o.Total
 	}
 	o.Balance = o.Total - o.PaidAmount
 	return o, err
