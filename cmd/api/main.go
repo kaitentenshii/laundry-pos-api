@@ -9,6 +9,7 @@ import (
 
 	"github.com/kaitentenshii/laundry-pos-api/internal/app"
 	"github.com/kaitentenshii/laundry-pos-api/internal/config"
+	"github.com/kaitentenshii/laundry-pos-api/internal/httpapi"
 	"github.com/kaitentenshii/laundry-pos-api/internal/service"
 	"github.com/kaitentenshii/laundry-pos-api/internal/store/postgres"
 )
@@ -42,7 +43,7 @@ func main() {
 	customers := service.NewCustomers(postgres.NewCustomerStore(database))
 	services := service.NewLaundryServices(postgres.NewLaundryServiceStore(database))
 	orders := service.NewOrders(postgres.NewOrderStore(database))
-	application := app.New(cfg, logger, database, auth, accounts, customers, services, orders)
+	application := app.New(cfg, logger, database, auth, accounts, customers, services, orders, httpapi.RouterOptions{Dashboard: service.NewDashboard(postgres.NewOrderStore(database))})
 	if err := application.Run(ctx); err != nil {
 		logger.Error("application stopped with an error", "error", err)
 		os.Exit(1)

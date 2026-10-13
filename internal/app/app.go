@@ -17,13 +17,17 @@ type App struct {
 	server *http.Server
 }
 
-func New(cfg config.Config, logger *slog.Logger, readinessChecker httpapi.ReadinessChecker, auth httpapi.AuthService, accounts httpapi.AccountService, customers httpapi.CustomerService, services httpapi.LaundryServiceManager, orders httpapi.OrderManager) *App {
+func New(cfg config.Config, logger *slog.Logger, readinessChecker httpapi.ReadinessChecker, auth httpapi.AuthService, accounts httpapi.AccountService, customers httpapi.CustomerService, services httpapi.LaundryServiceManager, orders httpapi.OrderManager, extra ...httpapi.RouterOptions) *App {
+	options := httpapi.RouterOptions{Auth: auth, AllowedOrigins: cfg.AllowedOrigins, Accounts: accounts, Customers: customers, Services: services, Orders: orders}
+	if len(extra) > 0 {
+		options.Dashboard = extra[0].Dashboard
+	}
 	return &App{
 		config: cfg,
 		logger: logger,
 		server: &http.Server{
 			Addr:              cfg.Address(),
-			Handler:           httpapi.NewRouter(logger, readinessChecker, httpapi.RouterOptions{Auth: auth, AllowedOrigins: cfg.AllowedOrigins, Accounts: accounts, Customers: customers, Services: services, Orders: orders}),
+			Handler:           httpapi.NewRouter(logger, readinessChecker, options),
 			ReadHeaderTimeout: 5 * time.Second,
 			ReadTimeout:       15 * time.Second,
 			WriteTimeout:      15 * time.Second,
