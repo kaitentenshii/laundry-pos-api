@@ -10,6 +10,10 @@ import (
 
 type orderManagerStub struct{}
 
+func (orderManagerStub) History(context.Context, int64) ([]service.OrderStatusHistory, error) {
+	return []service.OrderStatusHistory{}, nil
+}
+
 func (orderManagerStub) Transition(context.Context, int64, int64, service.OrderStatusInput) (service.Order, error) {
 	return service.Order{ID: 1, Status: "WASHING"}, nil
 }
