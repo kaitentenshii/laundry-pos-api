@@ -231,3 +231,35 @@ func TestOrderListFiltersAndPagination(t *testing.T) {
 		}
 	}
 }
+
+func TestOrderSearchWithCombinedFilters(t *testing.T) {
+	f := setupOrders(t)
+	ctx := context.Background()
+	input := f.input("order_search_test_123456")
+	order, err := f.manager.Create(ctx, f.actor, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, err := f.manager.List(ctx, service.OrderQuery{Search: order.Number, Status: "RECEIVED", PaymentStatus: "UNPAID"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, o := range list.Data {
+		if o.ID == order.ID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("number search failed")
+	}
+	f.pool.Exec(ctx, `UPDATE laundry.orders SET customer_name='Literal_%_NADIA' WHERE id=$1`, order.ID)
+	list, err = f.manager.List(ctx, service.OrderQuery{Search: "literal_%_nadia"})
+	if err != nil || list.Total != 1 || list.Data[0].ID != order.ID {
+		t.Fatal("literal case-insensitive name search failed", err)
+	}
+	list, err = f.manager.List(ctx, service.OrderQuery{Search: "literal_%_nadia", PaymentStatus: "PAID"})
+	if err != nil || list.Total != 0 {
+		t.Fatal("search filter combination failed", err)
+	}
+}

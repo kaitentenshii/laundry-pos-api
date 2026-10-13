@@ -22,7 +22,7 @@ func registerOrderRoutes(router chi.Router, auth AuthService, orders OrderManage
 		r.Use(requireRoles("admin", "cashier"))
 		r.Get("/orders", func(w http.ResponseWriter, r *http.Request) {
 			values := r.URL.Query()
-			q := service.OrderQuery{Status: values.Get("status"), PaymentStatus: values.Get("payment_status"), FromDate: values.Get("from"), ToDate: values.Get("to")}
+			q := service.OrderQuery{Search: values.Get("q"), Status: values.Get("status"), PaymentStatus: values.Get("payment_status"), FromDate: values.Get("from"), ToDate: values.Get("to")}
 			for key, target := range map[string]*int{"page": &q.Page, "page_size": &q.PageSize} {
 				if value := values.Get(key); value != "" {
 					parsed, err := strconv.Atoi(value)

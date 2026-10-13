@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/jackc/pgx/v5"
 	"github.com/kaitentenshii/laundry-pos-api/internal/service"
+	"strings"
 )
 
 func (s *OrderStore) ListOrders(ctx context.Context, q service.OrderQuery) (service.OrderList, error) {
@@ -13,11 +14,12 @@ func (s *OrderStore) ListOrders(ctx context.Context, q service.OrderQuery) (serv
 		return result, err
 	}
 	defer tx.Rollback(ctx)
-	const filter = ` WHERE ($1='' OR o.status=$1) AND ($2='' OR o.payment_status=$2) AND ($3::timestamptz IS NULL OR o.created_at >= $3) AND ($4::timestamptz IS NULL OR o.created_at < $4)`
-	if err := tx.QueryRow(ctx, `SELECT count(*) FROM laundry.orders o`+filter, q.Status, q.PaymentStatus, q.From, q.To).Scan(&result.Total); err != nil {
+	pattern := "%" + strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(q.Search) + "%"
+	const filter = ` WHERE ($1='' OR o.status=$1) AND ($2='' OR o.payment_status=$2) AND ($3::timestamptz IS NULL OR o.created_at >= $3) AND ($4::timestamptz IS NULL OR o.created_at < $4) AND (o.order_number ILIKE $5 OR o.customer_name ILIKE $5)`
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM laundry.orders o`+filter, q.Status, q.PaymentStatus, q.From, q.To, pattern).Scan(&result.Total); err != nil {
 		return result, err
 	}
-	rows, err := tx.Query(ctx, `SELECT `+orderColumns+` FROM laundry.orders o JOIN laundry.users u ON u.id=o.created_by`+filter+` ORDER BY o.id DESC LIMIT $5 OFFSET $6`, q.Status, q.PaymentStatus, q.From, q.To, q.PageSize, (q.Page-1)*q.PageSize)
+	rows, err := tx.Query(ctx, `SELECT `+orderColumns+` FROM laundry.orders o JOIN laundry.users u ON u.id=o.created_by`+filter+` ORDER BY o.id DESC LIMIT $6 OFFSET $7`, q.Status, q.PaymentStatus, q.From, q.To, pattern, q.PageSize, (q.Page-1)*q.PageSize)
 	if err != nil {
 		return result, err
 	}
