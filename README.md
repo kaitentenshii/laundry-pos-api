@@ -175,3 +175,15 @@ go test ./...
 ```
 
 The PostgreSQL integration test inserts its own temporary user and deletes that user and its sessions afterward. Without `TEST_DATABASE_URL`, that integration test is skipped; unit and HTTP tests still run.
+
+## User management (admin only)
+
+- `GET /users` returns `{ "data": [...] }` with public account information and last activity.
+- `POST /users` accepts `{ "name": "...", "identifier": "<username or email>", "role": "admin|cashier", "is_active": true, "password": "..." }`.
+- `PUT /users/{id}` accepts the same profile fields without password. It updates name, login identity, role, and account status.
+
+Username-only accounts have no email; email accounts receive a unique internal username. UI/API account creation requires at least 8 Unicode characters and at most 72 UTF-8 bytes for bcrypt. The initial local provisioning command retains its stricter 12-byte minimum.
+
+Passwords/hashes are never returned. Disabling an account or changing its role revokes all that account's sessions; reactivation does not restore old tokens. The current admin cannot demote/deactivate itself, and the final active administrator is protected. Account records are preserved for future transaction references.
+
+Migration `000003` allows username-only accounts and tracks last activity. Before rolling it back, assign email addresses to all username-only accounts; rollback refuses to invent login identities or discard them.

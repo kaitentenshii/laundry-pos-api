@@ -11,6 +11,7 @@ import (
 type RouterOptions struct {
 	Auth           AuthService
 	AllowedOrigins []string
+	Accounts       AccountService
 }
 
 func NewRouter(logger *slog.Logger, readinessChecker ReadinessChecker, options ...RouterOptions) http.Handler {
@@ -21,6 +22,9 @@ func NewRouter(logger *slog.Logger, readinessChecker ReadinessChecker, options .
 		router.Use(cors(options[0].AllowedOrigins))
 		if options[0].Auth != nil {
 			registerAuthRoutes(router, options[0].Auth, logger)
+			if options[0].Accounts != nil {
+				registerAccountRoutes(router, options[0].Auth, options[0].Accounts, logger)
+			}
 		}
 	}
 

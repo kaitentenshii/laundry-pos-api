@@ -1,0 +1,4 @@
+BEGIN;
+ALTER TABLE laundry.users ALTER COLUMN email DROP NOT NULL;
+ALTER TABLE laundry.users ADD COLUMN last_active_at TIMESTAMPTZ;
+COMMIT;
