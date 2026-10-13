@@ -22,9 +22,21 @@ type Customer struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 type CustomerStore interface {
-	ListCustomers(context.Context) ([]Customer, error)
+	ListCustomers(context.Context, CustomerQuery) (CustomerList, error)
 	InsertCustomer(context.Context, CustomerInput) (Customer, error)
 	UpdateCustomer(context.Context, int64, CustomerInput) (Customer, error)
+}
+type CustomerQuery struct {
+	Search   string
+	Consent  *bool
+	Page     int
+	PageSize int
+}
+type CustomerList struct {
+	Data     []Customer `json:"data"`
+	Total    int64      `json:"total"`
+	Page     int        `json:"page"`
+	PageSize int        `json:"page_size"`
 }
 type Customers struct{ store CustomerStore }
 
@@ -67,7 +79,22 @@ func customerProfile(input CustomerInput) (CustomerInput, error) {
 	input.Whatsapp = phone
 	return input, err
 }
-func (s *Customers) List(ctx context.Context) ([]Customer, error) { return s.store.ListCustomers(ctx) }
+func (s *Customers) List(ctx context.Context, q CustomerQuery) (CustomerList, error) {
+	q.Search = strings.TrimSpace(q.Search)
+	if utf8.RuneCountInString(q.Search) > 120 {
+		return CustomerList{}, Invalid("q", "Pencarian maksimal 120 karakter.")
+	}
+	if q.Page == 0 {
+		q.Page = 1
+	}
+	if q.PageSize == 0 {
+		q.PageSize = 20
+	}
+	if q.Page < 1 || q.Page > 1000000 || q.PageSize < 1 || q.PageSize > 100 {
+		return CustomerList{}, Invalid("page", "Pagination tidak valid (ukuran halaman 1–100).")
+	}
+	return s.store.ListCustomers(ctx, q)
+}
 func (s *Customers) Create(ctx context.Context, input CustomerInput) (Customer, error) {
 	input, err := customerProfile(input)
 	if err != nil {

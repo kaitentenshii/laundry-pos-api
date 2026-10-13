@@ -17,8 +17,8 @@ func (customerServiceStub) Update(_ context.Context, id int64, input service.Cus
 	return service.Customer{ID: id, CustomerInput: input}, nil
 }
 
-func (customerServiceStub) List(context.Context) ([]service.Customer, error) {
-	return []service.Customer{}, nil
+func (customerServiceStub) List(context.Context, service.CustomerQuery) (service.CustomerList, error) {
+	return service.CustomerList{Data: []service.Customer{}}, nil
 }
 func (customerServiceStub) Create(_ context.Context, input service.CustomerInput) (service.Customer, error) {
 	return service.Customer{ID: 1, CustomerInput: input}, nil

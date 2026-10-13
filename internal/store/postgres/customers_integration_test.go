@@ -39,12 +39,12 @@ func TestCustomerRegistrationPostgres(t *testing.T) {
 	if second.ID == first.ID || !second.WhatsappOptIn {
 		t.Fatal("independent customer consent not persisted")
 	}
-	data, err := manager.List(ctx)
+	data, err := manager.List(ctx, service.CustomerQuery{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	found := false
-	for _, c := range data {
+	for _, c := range data.Data {
 		if c.ID == first.ID {
 			found = true
 		}
@@ -63,5 +63,28 @@ func TestCustomerRegistrationPostgres(t *testing.T) {
 	}
 	if _, err := manager.Update(ctx, 9223372036854775807, input); !errors.Is(err, service.ErrNotFound) {
 		t.Fatal("missing customer not detected")
+	}
+	input.Name = "Literal_%_Customer"
+	unique, err := manager.Create(ctx, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Exec(ctx, `DELETE FROM laundry.customers WHERE id=$1`, unique.ID)
+	results, err := manager.List(ctx, service.CustomerQuery{Search: "literal_%_", PageSize: 1})
+	if err != nil || results.Total != 1 || len(results.Data) != 1 || results.Data[0].ID != unique.ID {
+		t.Fatal("literal/case-insensitive search failed", err)
+	}
+	results, err = manager.List(ctx, service.CustomerQuery{Search: "literal_%_", Page: 2, PageSize: 1})
+	if err != nil || results.Total != 1 || len(results.Data) != 0 {
+		t.Fatal("pagination totals failed", err)
+	}
+	consent := false
+	results, err = manager.List(ctx, service.CustomerQuery{Search: "literal_%_", Consent: &consent})
+	if err != nil || results.Total != 0 {
+		t.Fatal("consent filter ignored", err)
+	}
+	results, err = manager.List(ctx, service.CustomerQuery{Search: "081111111111"})
+	if err != nil || results.Total < 2 {
+		t.Fatal("local phone search failed", err)
 	}
 }

@@ -193,3 +193,5 @@ Migration `000003` allows username-only accounts and tracks last activity. Befor
 Authenticated admins and cashiers can `GET /customers` and `POST /customers`.
 Create JSON: `name`, `whatsapp`, optional `address` and `notes`, and `whatsapp_opt_in` (defaults to false). Local Indonesian `08...` numbers normalize to `+628...`; international numbers use E.164 with 8–15 digits. Shared household phone numbers are allowed. Name is limited to 120 characters, address to 1000, and notes to 2000. Run migration 000004 before starting the API. Consent is stored only; WhatsApp delivery is configured manually and is not triggered by customer registration.
 `n`PUT /customers/{id}` updates the complete editable customer profile. IDs and creation timestamps remain unchanged; invalid input returns field errors and unknown IDs return 404.
+
+Customer list accepts `q` (literal case-insensitive name or normalized phone substring), `consent=true|false`, `page` (default 1), and `page_size` (default 20, maximum 100). Returns `{data,total,page,page_size}` with consistent totals and deterministic newest-first ordering. Search metacharacters are treated literally.
