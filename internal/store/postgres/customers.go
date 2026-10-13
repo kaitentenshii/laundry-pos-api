@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kaitentenshii/laundry-pos-api/internal/service"
@@ -16,7 +17,14 @@ const customerColumns = `id,name,whatsapp,address,notes,whatsapp_opt_in,created_
 func scanCustomer(row pgx.Row) (service.Customer, error) {
 	var c service.Customer
 	err := row.Scan(&c.ID, &c.Name, &c.Whatsapp, &c.Address, &c.Notes, &c.WhatsappOptIn, &c.CreatedAt, &c.UpdatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return c, service.ErrNotFound
+	}
 	return c, err
+}
+
+func (s *CustomerStore) UpdateCustomer(ctx context.Context, id int64, input service.CustomerInput) (service.Customer, error) {
+	return scanCustomer(s.pool.QueryRow(ctx, `UPDATE laundry.customers SET name=$2,whatsapp=$3,address=$4,notes=$5,whatsapp_opt_in=$6,updated_at=now() WHERE id=$1 RETURNING `+customerColumns, id, input.Name, input.Whatsapp, input.Address, input.Notes, input.WhatsappOptIn))
 }
 func (s *CustomerStore) ListCustomers(ctx context.Context) ([]service.Customer, error) {
 	rows, err := s.pool.Query(ctx, `SELECT `+customerColumns+` FROM laundry.customers ORDER BY id DESC`)

@@ -10,6 +10,13 @@ import (
 
 type customerServiceStub struct{}
 
+func (customerServiceStub) Update(_ context.Context, id int64, input service.CustomerInput) (service.Customer, error) {
+	if id == 999 {
+		return service.Customer{}, service.ErrNotFound
+	}
+	return service.Customer{ID: id, CustomerInput: input}, nil
+}
+
 func (customerServiceStub) List(context.Context) ([]service.Customer, error) {
 	return []service.Customer{}, nil
 }
@@ -34,6 +41,17 @@ func TestCustomerRoutesRoles(t *testing.T) {
 		}
 		if role == "cashier" && authRequest(router, "POST", "/customers", `{"unexpected":1}`, "valid-token").Code != 400 {
 			t.Fatal("unknown payload field accepted")
+		}
+		if role == "cashier" {
+			if authRequest(router, "PUT", "/customers/1", `{"name":"Updated","whatsapp":"081234567890"}`, "valid-token").Code != 200 {
+				t.Fatal("cashier cannot edit")
+			}
+			if authRequest(router, "PUT", "/customers/999", `{}`, "valid-token").Code != 404 {
+				t.Fatal("missing customer must return 404")
+			}
+			if authRequest(router, "PUT", "/customers/bad", `{}`, "valid-token").Code != 400 {
+				t.Fatal("invalid customer id accepted")
+			}
 		}
 	}
 }

@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"github.com/kaitentenshii/laundry-pos-api/internal/service"
 	"os"
 	"testing"
@@ -50,5 +51,17 @@ func TestCustomerRegistrationPostgres(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("customer missing from list")
+	}
+	input.Name = "Updated customer"
+	input.Whatsapp = "081111111111"
+	input.Address = "New address"
+	input.Notes = "New notes"
+	input.WhatsappOptIn = true
+	updated, err := manager.Update(ctx, first.ID, input)
+	if err != nil || updated.ID != first.ID || !updated.CreatedAt.Equal(first.CreatedAt) || updated.Name != input.Name || updated.Whatsapp != "+6281111111111" || !updated.WhatsappOptIn {
+		t.Fatal("update changed identity or did not persist fields", err)
+	}
+	if _, err := manager.Update(ctx, 9223372036854775807, input); !errors.Is(err, service.ErrNotFound) {
+		t.Fatal("missing customer not detected")
 	}
 }

@@ -24,6 +24,7 @@ type Customer struct {
 type CustomerStore interface {
 	ListCustomers(context.Context) ([]Customer, error)
 	InsertCustomer(context.Context, CustomerInput) (Customer, error)
+	UpdateCustomer(context.Context, int64, CustomerInput) (Customer, error)
 }
 type Customers struct{ store CustomerStore }
 
@@ -73,4 +74,12 @@ func (s *Customers) Create(ctx context.Context, input CustomerInput) (Customer, 
 		return Customer{}, err
 	}
 	return s.store.InsertCustomer(ctx, input)
+}
+
+func (s *Customers) Update(ctx context.Context, id int64, input CustomerInput) (Customer, error) {
+	input, err := customerProfile(input)
+	if err != nil {
+		return Customer{}, err
+	}
+	return s.store.UpdateCustomer(ctx, id, input)
 }
