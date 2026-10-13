@@ -14,6 +14,7 @@ type RouterOptions struct {
 	Accounts       AccountService
 	Customers      CustomerService
 	Services       LaundryServiceManager
+	Orders         OrderManager
 }
 
 func NewRouter(logger *slog.Logger, readinessChecker ReadinessChecker, options ...RouterOptions) http.Handler {
@@ -24,6 +25,9 @@ func NewRouter(logger *slog.Logger, readinessChecker ReadinessChecker, options .
 		router.Use(cors(options[0].AllowedOrigins))
 		if options[0].Auth != nil {
 			registerAuthRoutes(router, options[0].Auth, logger)
+			if options[0].Orders != nil {
+				registerOrderRoutes(router, options[0].Auth, options[0].Orders, logger)
+			}
 			if options[0].Services != nil {
 				registerLaundryServiceRoutes(router, options[0].Auth, options[0].Services, logger)
 			}
