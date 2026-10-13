@@ -53,8 +53,10 @@ type Order struct {
 	CreatedAt        time.Time   `json:"created_at"`
 	UpdatedAt        time.Time   `json:"updated_at"`
 	Items            []OrderItem `json:"items"`
+	Payment          *Payment    `json:"payment,omitempty"`
 }
 type OrderStore interface {
+	InsertPayment(context.Context, int64, int64, PaymentInput, string) (Payment, error)
 	ListOrders(context.Context, OrderQuery) (OrderList, error)
 	InsertOrder(context.Context, int64, OrderInput, string) (Order, error)
 	GetOrder(context.Context, int64) (Order, error)

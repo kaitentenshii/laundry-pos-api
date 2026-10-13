@@ -219,3 +219,7 @@ Order numbers use the database identity sequence (LD-<id>) and a unique database
 GET /orders returns data,total,page,page_size. Filters: status, payment_status, from/to (inclusive calendar dates in UTC+7), page and page_size (max100). Ordering is newest-first. Totals and items are read under one repeatable-read snapshot.
 Order detail includes creator name, contact snapshots, all item snapshots, total, paid_amount, balance, due time, and notes. Customer order_count now counts persisted orders; no static example count remains.
 Order list q searches order number and the transaction customer-name snapshot case-insensitively. SQL wildcard characters are escaped as literal text; search combines with all list filters and pagination.
+
+### Manual payment
+
+Migration 000008 adds one full settlement per order. POST /orders/{id}/payments accepts method CASH/TRANSFER/QRIS, integer amount_received, RFC3339 paid_at, optional notes, confirmed (required true for TRANSFER/QRIS), and request_key. Underpayment is rejected. Cash change equals received minus the full balance; noncash change is zero. Payment row and PAID status commit atomically while laundry status stays unchanged. Replaying the same request returns the same payment; a different request after settlement returns 409. The order row lock and unique order_id protect concurrent requests. Future payment dates and dates before order creation are rejected.

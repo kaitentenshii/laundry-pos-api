@@ -10,6 +10,10 @@ import (
 
 type orderManagerStub struct{}
 
+func (orderManagerStub) Pay(context.Context, int64, int64, service.PaymentInput) (service.Payment, error) {
+	return service.Payment{ID: 1}, nil
+}
+
 func (orderManagerStub) List(context.Context, service.OrderQuery) (service.OrderList, error) {
 	return service.OrderList{Data: []service.Order{}}, nil
 }

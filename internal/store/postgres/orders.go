@@ -51,7 +51,19 @@ func readOrder(ctx context.Context, q orderQuerier, id int64) (service.Order, er
 		}
 		o.Items = append(o.Items, item)
 	}
-	return o, rows.Err()
+	if err := rows.Err(); err != nil {
+		return o, err
+	}
+	rows.Close()
+	payment, err := readPayment(ctx, q, id)
+	if err == nil {
+		o.Payment = &payment
+		o.PaidAmount = payment.AmountSettled
+		o.Balance = o.Total - o.PaidAmount
+	} else if !errors.Is(err, service.ErrNotFound) {
+		return o, err
+	}
+	return o, nil
 }
 func (s *OrderStore) GetOrder(ctx context.Context, id int64) (service.Order, error) {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
