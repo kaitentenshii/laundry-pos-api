@@ -228,3 +228,4 @@ Paid amounts in list/detail are derived from persisted settlements. Laundry stat
 ### Laundry status
 
 Migration 000009 adds history and initial RECEIVED records. PATCH /orders/{id}/status accepts from_status, status, request_key. Allowed sequence is RECEIVED -> WASHING -> COMPLETED -> PICKED_UP, with PAID required for pickup. Orders are locked; stale expected states, jumps, and reversals return 409. A successful transition updates the order and inserts actor/status/time history atomically. Identical retries create no extra history. WhatsApp delivery is manual/outside this scope and never blocks status changes.
+Order responses expose allowed_next_statuses and pickup_blocked_reason. The API is authoritative: skipping/reversing states and stale actions cannot mutate orders or history; COMPLETED -> PICKED_UP additionally requires PAID.

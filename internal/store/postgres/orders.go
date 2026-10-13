@@ -28,6 +28,10 @@ func scanOrder(row pgx.Row) (service.Order, error) {
 		return o, service.ErrNotFound
 	}
 	o.Balance = o.Total - o.PaidAmount
+	o.AllowedNextStatuses = service.AllowedOrderTransitions(o.Status, o.PaymentStatus)
+	if o.Status == "COMPLETED" && o.PaymentStatus != "PAID" {
+		o.PickupBlockedReason = "Lunasi pembayaran sebelum menyerahkan cucian kepada pelanggan."
+	}
 	return o, err
 }
 func readOrder(ctx context.Context, q orderQuerier, id int64) (service.Order, error) {
