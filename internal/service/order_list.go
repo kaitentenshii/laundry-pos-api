@@ -2,10 +2,13 @@ package service
 
 import (
 	"context"
+	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type OrderQuery struct {
+	Search                                  string
 	Status, PaymentStatus, FromDate, ToDate string
 	Page, PageSize                          int
 	From, To                                *time.Time
@@ -18,6 +21,10 @@ type OrderList struct {
 }
 
 func (s *Orders) List(ctx context.Context, q OrderQuery) (OrderList, error) {
+	q.Search = strings.TrimSpace(q.Search)
+	if utf8.RuneCountInString(q.Search) > 120 {
+		return OrderList{}, Invalid("q", "Pencarian maksimal 120 karakter.")
+	}
 	if q.Status != "" && q.Status != "RECEIVED" && q.Status != "WASHING" && q.Status != "COMPLETED" && q.Status != "PICKED_UP" {
 		return OrderList{}, Invalid("status", "Status cucian tidak valid.")
 	}

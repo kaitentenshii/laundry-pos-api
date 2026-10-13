@@ -218,3 +218,4 @@ The frontend sends expected_total. A mismatch with the locked current prices rej
 Order numbers use the database identity sequence (LD-<id>) and a unique database constraint. Concurrent inserts cannot share an identity; concurrent retries with one request key resolve to one order.
 GET /orders returns data,total,page,page_size. Filters: status, payment_status, from/to (inclusive calendar dates in UTC+7), page and page_size (max100). Ordering is newest-first. Totals and items are read under one repeatable-read snapshot.
 Order detail includes creator name, contact snapshots, all item snapshots, total, paid_amount, balance, due time, and notes. Customer order_count now counts persisted orders; no static example count remains.
+Order list q searches order number and the transaction customer-name snapshot case-insensitively. SQL wildcard characters are escaped as literal text; search combines with all list filters and pagination.
