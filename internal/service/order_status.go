@@ -3,11 +3,26 @@ package service
 import (
 	"context"
 	"errors"
+	"time"
 )
 
 var ErrInvalidTransition = errors.New("Perubahan status harus mengikuti Diterima → Dicuci → Selesai → Diambil.")
 var ErrPaymentRequired = errors.New("Pesanan harus selesai dan lunas sebelum diambil.")
 var ErrStaleOrder = errors.New("Status pesanan sudah berubah. Muat ulang detail pesanan.")
+
+type OrderStatusHistory struct {
+	ID         int64     `json:"id"`
+	OrderID    int64     `json:"order_id"`
+	FromStatus string    `json:"from_status"`
+	ToStatus   string    `json:"to_status"`
+	ChangedBy  int64     `json:"changed_by"`
+	ActorName  string    `json:"actor_name"`
+	ChangedAt  time.Time `json:"changed_at"`
+}
+
+func (s *Orders) History(ctx context.Context, id int64) ([]OrderStatusHistory, error) {
+	return s.store.ListOrderHistory(ctx, id)
+}
 
 type OrderStatusInput struct {
 	FromStatus string `json:"from_status"`

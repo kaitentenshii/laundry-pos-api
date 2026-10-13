@@ -64,6 +64,10 @@ func readOrder(ctx context.Context, q orderQuerier, id int64) (service.Order, er
 	} else if !errors.Is(err, service.ErrNotFound) {
 		return o, err
 	}
+	o.History, err = readOrderHistory(ctx, q, id)
+	if err != nil {
+		return o, err
+	}
 	return o, nil
 }
 func (s *OrderStore) GetOrder(ctx context.Context, id int64) (service.Order, error) {

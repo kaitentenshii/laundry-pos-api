@@ -8,6 +8,33 @@ import (
 	"time"
 )
 
+func readOrderHistory(ctx context.Context, q orderQuerier, id int64) ([]service.OrderStatusHistory, error) {
+	rows, err := q.Query(ctx, `SELECT id,order_id,COALESCE(from_status,''),to_status,changed_by,actor_name,changed_at FROM laundry.order_status_history WHERE order_id=$1 ORDER BY id DESC`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	data := make([]service.OrderStatusHistory, 0)
+	for rows.Next() {
+		var event service.OrderStatusHistory
+		if err := rows.Scan(&event.ID, &event.OrderID, &event.FromStatus, &event.ToStatus, &event.ChangedBy, &event.ActorName, &event.ChangedAt); err != nil {
+			return nil, err
+		}
+		data = append(data, event)
+	}
+	return data, rows.Err()
+}
+func (s *OrderStore) ListOrderHistory(ctx context.Context, id int64) ([]service.OrderStatusHistory, error) {
+	var exists bool
+	if err := s.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM laundry.orders WHERE id=$1)`, id).Scan(&exists); err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, service.ErrNotFound
+	}
+	return readOrderHistory(ctx, s.pool, id)
+}
+
 func (s *OrderStore) TransitionOrder(ctx context.Context, actor, id int64, input service.OrderStatusInput) (service.Order, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {

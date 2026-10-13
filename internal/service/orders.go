@@ -35,29 +35,31 @@ type OrderItem struct {
 	Subtotal       int64  `json:"subtotal"`
 }
 type Order struct {
-	ID                  int64       `json:"id"`
-	Number              string      `json:"order_number"`
-	CustomerID          int64       `json:"customer_id"`
-	CustomerName        string      `json:"customer_name"`
-	CustomerWhatsapp    string      `json:"customer_whatsapp"`
-	CustomerOptIn       bool        `json:"customer_opt_in"`
-	CreatedBy           int64       `json:"created_by"`
-	CreatorName         string      `json:"creator_name"`
-	DueAt               time.Time   `json:"due_at"`
-	Notes               string      `json:"notes"`
-	Status              string      `json:"status"`
-	PaymentStatus       string      `json:"payment_status"`
-	Total               int64       `json:"total"`
-	PaidAmount          int64       `json:"paid_amount"`
-	Balance             int64       `json:"balance"`
-	CreatedAt           time.Time   `json:"created_at"`
-	UpdatedAt           time.Time   `json:"updated_at"`
-	Items               []OrderItem `json:"items"`
-	Payment             *Payment    `json:"payment,omitempty"`
-	AllowedNextStatuses []string    `json:"allowed_next_statuses"`
-	PickupBlockedReason string      `json:"pickup_blocked_reason,omitempty"`
+	ID                  int64                `json:"id"`
+	Number              string               `json:"order_number"`
+	CustomerID          int64                `json:"customer_id"`
+	CustomerName        string               `json:"customer_name"`
+	CustomerWhatsapp    string               `json:"customer_whatsapp"`
+	CustomerOptIn       bool                 `json:"customer_opt_in"`
+	CreatedBy           int64                `json:"created_by"`
+	CreatorName         string               `json:"creator_name"`
+	DueAt               time.Time            `json:"due_at"`
+	Notes               string               `json:"notes"`
+	Status              string               `json:"status"`
+	PaymentStatus       string               `json:"payment_status"`
+	Total               int64                `json:"total"`
+	PaidAmount          int64                `json:"paid_amount"`
+	Balance             int64                `json:"balance"`
+	CreatedAt           time.Time            `json:"created_at"`
+	UpdatedAt           time.Time            `json:"updated_at"`
+	Items               []OrderItem          `json:"items"`
+	Payment             *Payment             `json:"payment,omitempty"`
+	AllowedNextStatuses []string             `json:"allowed_next_statuses"`
+	PickupBlockedReason string               `json:"pickup_blocked_reason,omitempty"`
+	History             []OrderStatusHistory `json:"history,omitempty"`
 }
 type OrderStore interface {
+	ListOrderHistory(context.Context, int64) ([]OrderStatusHistory, error)
 	TransitionOrder(context.Context, int64, int64, OrderStatusInput) (Order, error)
 	InsertPayment(context.Context, int64, int64, PaymentInput, string) (Payment, error)
 	ListOrders(context.Context, OrderQuery) (OrderList, error)

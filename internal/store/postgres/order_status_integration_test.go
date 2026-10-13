@@ -41,6 +41,14 @@ func TestOrderStatusTransitionsAtomicAndIdempotent(t *testing.T) {
 	if from != "WASHING" || to != "COMPLETED" || actor != f.actor || name != "Order tester" {
 		t.Fatal("history actor/status incorrect")
 	}
+	history, err := f.manager.History(ctx, order.ID)
+	if err != nil || len(history) != 3 || history[0].ToStatus != "COMPLETED" || history[0].ChangedBy != f.actor || history[2].ToStatus != "RECEIVED" {
+		t.Fatal("history order/actor incorrect", err)
+	}
+	detail, err := f.manager.Get(ctx, order.ID)
+	if err != nil || detail.History[0].ToStatus != detail.Status {
+		t.Fatal("history latest mismatches detail", err)
+	}
 }
 
 func TestInvalidTransitionsDoNotMutateOrder(t *testing.T) {
