@@ -17,14 +17,16 @@ type CustomerInput struct {
 }
 type Customer struct {
 	CustomerInput
-	ID        int64     `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID         int64     `json:"id"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+	OrderCount int64     `json:"order_count"`
 }
 type CustomerStore interface {
 	ListCustomers(context.Context, CustomerQuery) (CustomerList, error)
 	InsertCustomer(context.Context, CustomerInput) (Customer, error)
 	UpdateCustomer(context.Context, int64, CustomerInput) (Customer, error)
+	GetCustomer(context.Context, int64) (Customer, error)
 }
 type CustomerQuery struct {
 	Search   string
@@ -39,6 +41,10 @@ type CustomerList struct {
 	PageSize int        `json:"page_size"`
 }
 type Customers struct{ store CustomerStore }
+
+func (s *Customers) Get(ctx context.Context, id int64) (Customer, error) {
+	return s.store.GetCustomer(ctx, id)
+}
 
 func NewCustomers(store CustomerStore) *Customers { return &Customers{store} }
 

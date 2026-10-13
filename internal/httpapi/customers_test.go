@@ -10,6 +10,13 @@ import (
 
 type customerServiceStub struct{}
 
+func (customerServiceStub) Get(_ context.Context, id int64) (service.Customer, error) {
+	if id == 999 {
+		return service.Customer{}, service.ErrNotFound
+	}
+	return service.Customer{ID: id}, nil
+}
+
 func (customerServiceStub) Update(_ context.Context, id int64, input service.CustomerInput) (service.Customer, error) {
 	if id == 999 {
 		return service.Customer{}, service.ErrNotFound

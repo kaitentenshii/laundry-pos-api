@@ -87,4 +87,11 @@ func TestCustomerRegistrationPostgres(t *testing.T) {
 	if err != nil || results.Total < 2 {
 		t.Fatal("local phone search failed", err)
 	}
+	detail, err := manager.Get(ctx, first.ID)
+	if err != nil || detail.Name != input.Name && detail.Name != "Updated customer" || detail.OrderCount != 0 {
+		t.Fatal("detail incorrect", err)
+	}
+	if _, err := manager.Get(ctx, 9223372036854775807); !errors.Is(err, service.ErrNotFound) {
+		t.Fatal("detail not found not detected")
+	}
 }
