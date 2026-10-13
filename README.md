@@ -201,3 +201,7 @@ Customer list accepts `q` (literal case-insensitive name or normalized phone sub
 ### Laundry services
 
 Admins manage `POST /services` and `PUT /services/{id}` with `name`, `unit` (`KG` or `ITEM`), integer rupiah `price` (0–999999999), `estimated_hours` (1–8760), and `is_active`. Create defaults to active; updates require an explicit status. `GET /services` allows admins and cashiers; cashier responses always exclude inactive records, even with `active=false`. UI labels KG as kg and ITEM as pcs; 24 hours equals one day. Migration 000005 is required. IDs remain stable and services are never hard-deleted through the API.
+
+### Price history and the order integration contract
+
+Migration 000006 records immutable versions of name, unit, price, and processing estimate. Every service write records changed pricing atomically; status-only changes keep the current version. Responses include `price_version_id`. Admins can inspect `GET /services/{id}/prices`. Existing versions cannot be updated. When Sprint 2 introduces order items, it must store the selected version ID plus name/unit/unit-price snapshots at order creation and calculate old totals from those item snapshots, never by joining mutable master prices. Actual order creation remains Sprint 2 scope.

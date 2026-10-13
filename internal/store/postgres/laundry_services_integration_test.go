@@ -62,4 +62,25 @@ func TestLaundryServicesPostgres(t *testing.T) {
 	if _, err := manager.Update(ctx, 9223372036854775807, input); !errors.Is(err, service.ErrNotFound) {
 		t.Fatal("missing service not detected")
 	}
+	oldVersion := updated.PriceVersionID
+	price = 9000
+	active = true
+	repriced, err := manager.Update(ctx, created.ID, input)
+	if err != nil || repriced.PriceVersionID == oldVersion || repriced.PriceVersionID == 0 {
+		t.Fatal("price version not updated", err)
+	}
+	versions, err := manager.Prices(ctx, created.ID)
+	if err != nil || len(versions) != 3 || versions[0].Price != 9000 || versions[1].Price != 8000 || versions[2].Unit != "KG" {
+		t.Fatal("old snapshots overwritten", err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE laundry.service_price_versions SET price=1 WHERE id=$1`, oldVersion); err == nil {
+		t.Fatal("snapshot update accepted")
+	}
+	if _, err := manager.Update(ctx, created.ID, input); err != nil {
+		t.Fatal(err)
+	}
+	versions, err = manager.Prices(ctx, created.ID)
+	if err != nil || len(versions) != 3 {
+		t.Fatal("unchanged price created duplicate snapshot")
+	}
 }
