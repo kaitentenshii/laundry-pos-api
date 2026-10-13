@@ -23,12 +23,28 @@ type LaundryService struct {
 	IsActive       bool      `json:"is_active"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
+	PriceVersionID int64     `json:"price_version_id"`
 }
 type LaundryServiceStore interface {
 	ListServices(context.Context, bool) ([]LaundryService, error)
 	SaveService(context.Context, int64, LaundryService) (LaundryService, error)
+	ListPriceVersions(context.Context, int64) ([]ServicePriceVersion, error)
 }
 type LaundryServices struct{ store LaundryServiceStore }
+
+type ServicePriceVersion struct {
+	ID             int64     `json:"id"`
+	ServiceID      int64     `json:"service_id"`
+	Name           string    `json:"name"`
+	Unit           string    `json:"unit"`
+	Price          int64     `json:"price"`
+	EstimatedHours int       `json:"estimated_hours"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+func (s *LaundryServices) Prices(ctx context.Context, id int64) ([]ServicePriceVersion, error) {
+	return s.store.ListPriceVersions(ctx, id)
+}
 
 func NewLaundryServices(store LaundryServiceStore) *LaundryServices { return &LaundryServices{store} }
 func (s *LaundryServices) List(ctx context.Context, activeOnly bool) ([]LaundryService, error) {

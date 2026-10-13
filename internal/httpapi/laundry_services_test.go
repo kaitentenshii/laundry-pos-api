@@ -10,6 +10,10 @@ import (
 
 type laundryServiceStub struct{ activeOnly bool }
 
+func (*laundryServiceStub) Prices(context.Context, int64) ([]service.ServicePriceVersion, error) {
+	return []service.ServicePriceVersion{}, nil
+}
+
 func (s *laundryServiceStub) List(_ context.Context, active bool) ([]service.LaundryService, error) {
 	s.activeOnly = active
 	return []service.LaundryService{}, nil

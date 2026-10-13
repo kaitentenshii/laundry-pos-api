@@ -10,6 +10,7 @@ import (
 )
 
 type LaundryServiceManager interface {
+	Prices(context.Context, int64) ([]service.ServicePriceVersion, error)
 	List(context.Context, bool) ([]service.LaundryService, error)
 	Create(context.Context, service.LaundryServiceInput) (service.LaundryService, error)
 	Update(context.Context, int64, service.LaundryServiceInput) (service.LaundryService, error)
@@ -40,6 +41,20 @@ func registerLaundryServiceRoutes(router chi.Router, auth AuthService, manager L
 		})
 		r.Group(func(r chi.Router) {
 			r.Use(requireRoles("admin"))
+			r.Get("/services/{id}/prices", func(w http.ResponseWriter, r *http.Request) {
+				id, ok := resourceID(w, r)
+				if !ok {
+					return
+				}
+				ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+				defer cancel()
+				data, err := manager.Prices(ctx, id)
+				if err != nil {
+					managementError(w, logger, err)
+					return
+				}
+				writeJSON(w, 200, map[string]any{"data": data})
+			})
 			r.Post("/services", func(w http.ResponseWriter, r *http.Request) {
 				var input service.LaundryServiceInput
 				if !decodeInput(w, r, &input) {
