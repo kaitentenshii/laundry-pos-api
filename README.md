@@ -205,3 +205,5 @@ Admins manage `POST /services` and `PUT /services/{id}` with `name`, `unit` (`KG
 ### Price history and the order integration contract
 
 Migration 000006 records immutable versions of name, unit, price, and processing estimate. Every service write records changed pricing atomically; status-only changes keep the current version. Responses include `price_version_id`. Admins can inspect `GET /services/{id}/prices`. Existing versions cannot be updated. When Sprint 2 introduces order items, it must store the selected version ID plus name/unit/unit-price snapshots at order creation and calculate old totals from those item snapshots, never by joining mutable master prices. Actual order creation remains Sprint 2 scope.
+
+`PATCH /services/{id}/status` accepts an explicit boolean `is_active` and requires admin access. Status changes preserve identity and all price versions. Cashier `GET /services` always excludes inactive services. The Sprint 2 order creation handler must recheck active status inside its write transaction; a previously loaded selector is not authorization to order an inactive service.

@@ -83,4 +83,23 @@ func TestLaundryServicesPostgres(t *testing.T) {
 	if err != nil || len(versions) != 3 {
 		t.Fatal("unchanged price created duplicate snapshot")
 	}
+	versionID := repriced.PriceVersionID
+	disabled, err := manager.SetActive(ctx, created.ID, &active)
+	if err != nil || disabled.PriceVersionID != versionID {
+		t.Fatal("status changed pricing version", err)
+	}
+	active = false
+	disabled, err = manager.SetActive(ctx, created.ID, &active)
+	if err != nil || disabled.IsActive || disabled.Price != 9000 || disabled.PriceVersionID != versionID {
+		t.Fatal("deactivation removed pricing", err)
+	}
+	active = true
+	enabled, err := manager.SetActive(ctx, created.ID, &active)
+	if err != nil || !enabled.IsActive || enabled.ID != created.ID {
+		t.Fatal("reactivation failed", err)
+	}
+	versions, err = manager.Prices(ctx, created.ID)
+	if err != nil || len(versions) != 3 {
+		t.Fatal("status altered historical versions")
+	}
 }
