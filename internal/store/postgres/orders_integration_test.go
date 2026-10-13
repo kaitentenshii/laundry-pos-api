@@ -95,3 +95,29 @@ func TestOrderCreationPostgres(t *testing.T) {
 		t.Fatal("failed request persisted partial order")
 	}
 }
+
+func TestMultipleOrderServicesPostgres(t *testing.T) {
+	f := setupOrders(t)
+	ctx := context.Background()
+	input := f.input("multiple_services_123456")
+	input.Items = []service.OrderItemInput{{ServiceID: f.kg, Quantity: "4.125"}, {ServiceID: f.item, Quantity: "2"}}
+	order, err := f.manager.Create(ctx, f.actor, input)
+	if err != nil || len(order.Items) != 2 || order.Total != 83000 || order.Items[0].QuantityMilli != 4125 || order.Items[1].Unit != "ITEM" {
+		t.Fatal("multi-service calculation failed", err)
+	}
+	input.RequestKey = "invalid_item_count_123456"
+	input.Items[1].Quantity = "1.5"
+	if _, err := f.manager.Create(ctx, f.actor, input); err == nil {
+		t.Fatal("fractional pcs accepted")
+	}
+	var count int
+	f.pool.QueryRow(ctx, `SELECT count(*) FROM laundry.orders WHERE created_by=$1`, f.actor).Scan(&count)
+	if count != 1 {
+		t.Fatal("invalid second line left partial transaction")
+	}
+	input.Items = nil
+	input.RequestKey = "empty_order_items_123456"
+	if _, err := f.manager.Create(ctx, f.actor, input); err == nil {
+		t.Fatal("empty order accepted")
+	}
+}
