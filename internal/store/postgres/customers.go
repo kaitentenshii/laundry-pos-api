@@ -13,6 +13,10 @@ type CustomerStore struct{ pool *pgxpool.Pool }
 
 func NewCustomerStore(pool *pgxpool.Pool) *CustomerStore { return &CustomerStore{pool} }
 
+func (s *CustomerStore) GetCustomer(ctx context.Context, id int64) (service.Customer, error) {
+	return scanCustomer(s.pool.QueryRow(ctx, `SELECT `+customerColumns+` FROM laundry.customers WHERE id=$1`, id))
+}
+
 const customerColumns = `id,name,whatsapp,address,notes,whatsapp_opt_in,created_at,updated_at`
 
 func scanCustomer(row pgx.Row) (service.Customer, error) {
