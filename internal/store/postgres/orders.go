@@ -131,6 +131,9 @@ func (s *OrderStore) InsertOrder(ctx context.Context, actor int64, input service
 		items = append(items, service.OrderItem{ServiceID: selected.ID, PriceVersionID: selected.PriceVersionID, ServiceName: selected.Name, Unit: selected.Unit, UnitPrice: selected.Price, QuantityMilli: milli, Subtotal: subtotal})
 	}
 	var id int64
+	if input.ExpectedTotal != nil && total != *input.ExpectedTotal {
+		return service.Order{}, service.Invalid("expected_total", "Harga layanan berubah. Periksa ringkasan terbaru sebelum menyimpan kembali.")
+	}
 	err = tx.QueryRow(ctx, `INSERT INTO laundry.orders(customer_id,customer_name,customer_whatsapp,customer_opt_in,created_by,due_at,notes,total,request_key,request_hash) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`, customer.ID, customer.Name, customer.Whatsapp, customer.WhatsappOptIn, actor, input.DueAt, input.Notes, total, input.RequestKey, hash).Scan(&id)
 	if err != nil {
 		return service.Order{}, err

@@ -121,3 +121,24 @@ func TestMultipleOrderServicesPostgres(t *testing.T) {
 		t.Fatal("empty order accepted")
 	}
 }
+
+func TestServerVerifiesPresentedOrderTotal(t *testing.T) {
+	f := setupOrders(t)
+	ctx := context.Background()
+	input := f.input("verify_order_total_12345")
+	expected := int64(31000)
+	input.ExpectedTotal = &expected
+	if _, err := f.manager.Create(ctx, f.actor, input); err == nil {
+		t.Fatal("client total mismatch accepted")
+	}
+	var count int
+	f.pool.QueryRow(ctx, `SELECT count(*) FROM laundry.orders WHERE created_by=$1`, f.actor).Scan(&count)
+	if count != 0 {
+		t.Fatal("mismatched total persisted")
+	}
+	expected = 32000
+	order, err := f.manager.Create(ctx, f.actor, input)
+	if err != nil || order.Total != expected {
+		t.Fatal("matching total rejected", err)
+	}
+}
