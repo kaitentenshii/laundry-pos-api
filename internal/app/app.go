@@ -21,6 +21,7 @@ func New(cfg config.Config, logger *slog.Logger, readinessChecker httpapi.Readin
 	options := httpapi.RouterOptions{Auth: auth, AllowedOrigins: cfg.AllowedOrigins, Accounts: accounts, Customers: customers, Services: services, Orders: orders}
 	if len(extra) > 0 {
 		options.Dashboard = extra[0].Dashboard
+		options.Reports = extra[0].Reports
 	}
 	return &App{
 		config: cfg,

@@ -43,7 +43,7 @@ func main() {
 	customers := service.NewCustomers(postgres.NewCustomerStore(database))
 	services := service.NewLaundryServices(postgres.NewLaundryServiceStore(database))
 	orders := service.NewOrders(postgres.NewOrderStore(database))
-	application := app.New(cfg, logger, database, auth, accounts, customers, services, orders, httpapi.RouterOptions{Dashboard: service.NewDashboard(postgres.NewOrderStore(database))})
+	application := app.New(cfg, logger, database, auth, accounts, customers, services, orders, httpapi.RouterOptions{Dashboard: service.NewDashboard(postgres.NewOrderStore(database)), Reports: service.NewReports(postgres.NewOrderStore(database))})
 	if err := application.Run(ctx); err != nil {
 		logger.Error("application stopped with an error", "error", err)
 		os.Exit(1)
