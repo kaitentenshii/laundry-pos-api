@@ -6,11 +6,12 @@ import (
 	"github.com/kaitentenshii/laundry-pos-api/internal/service"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 )
 
 type CustomerService interface {
-	List(context.Context) ([]service.Customer, error)
+	List(context.Context, service.CustomerQuery) (service.CustomerList, error)
 	Create(context.Context, service.CustomerInput) (service.Customer, error)
 	Update(context.Context, int64, service.CustomerInput) (service.Customer, error)
 }
@@ -40,12 +41,31 @@ func registerCustomerRoutes(router chi.Router, auth AuthService, customers Custo
 		r.Get("/customers", func(w http.ResponseWriter, r *http.Request) {
 			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 			defer cancel()
-			data, err := customers.List(ctx)
+			query := service.CustomerQuery{Search: r.URL.Query().Get("q")}
+			for key, target := range map[string]*int{"page": &query.Page, "page_size": &query.PageSize} {
+				if value := r.URL.Query().Get(key); value != "" {
+					parsed, err := strconv.Atoi(value)
+					if err != nil || parsed < 1 {
+						managementError(w, logger, service.Invalid(key, "Pagination tidak valid."))
+						return
+					}
+					*target = parsed
+				}
+			}
+			if value := r.URL.Query().Get("consent"); value != "" {
+				if value != "true" && value != "false" {
+					managementError(w, logger, service.Invalid("consent", "Filter persetujuan tidak valid."))
+					return
+				}
+				consent := value == "true"
+				query.Consent = &consent
+			}
+			data, err := customers.List(ctx, query)
 			if err != nil {
 				managementError(w, logger, err)
 				return
 			}
-			writeJSON(w, 200, map[string]any{"data": data})
+			writeJSON(w, 200, data)
 		})
 		r.Post("/customers", func(w http.ResponseWriter, r *http.Request) {
 			var input service.CustomerInput
