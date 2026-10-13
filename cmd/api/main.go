@@ -39,7 +39,8 @@ func main() {
 		os.Exit(1)
 	}
 	accounts := service.NewAccounts(postgres.NewAccountStore(database))
-	application := app.New(cfg, logger, database, auth, accounts)
+	customers := service.NewCustomers(postgres.NewCustomerStore(database))
+	application := app.New(cfg, logger, database, auth, accounts, customers)
 	if err := application.Run(ctx); err != nil {
 		logger.Error("application stopped with an error", "error", err)
 		os.Exit(1)
