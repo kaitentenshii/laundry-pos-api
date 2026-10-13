@@ -17,11 +17,12 @@ type OrderItemInput struct {
 	Quantity  string `json:"quantity"`
 }
 type OrderInput struct {
-	CustomerID int64            `json:"customer_id"`
-	DueAt      time.Time        `json:"due_at"`
-	Notes      string           `json:"notes"`
-	Items      []OrderItemInput `json:"items"`
-	RequestKey string           `json:"request_key"`
+	CustomerID    int64            `json:"customer_id"`
+	DueAt         time.Time        `json:"due_at"`
+	Notes         string           `json:"notes"`
+	Items         []OrderItemInput `json:"items"`
+	RequestKey    string           `json:"request_key"`
+	ExpectedTotal *int64           `json:"expected_total,omitempty"`
 }
 type OrderItem struct {
 	ID             int64  `json:"id"`
@@ -92,6 +93,9 @@ func ItemSubtotal(price, milli int64) (int64, error) {
 }
 func (s *Orders) Create(ctx context.Context, actor int64, input OrderInput) (Order, error) {
 	input.Notes = strings.TrimSpace(input.Notes)
+	if input.ExpectedTotal != nil && (*input.ExpectedTotal < 0 || *input.ExpectedTotal > MaxOrderTotal) {
+		return Order{}, Invalid("expected_total", "Total tidak valid.")
+	}
 	if input.CustomerID < 1 {
 		return Order{}, Invalid("customer_id", "Pilih pelanggan terdaftar.")
 	}
