@@ -10,6 +10,10 @@ import (
 
 type orderManagerStub struct{}
 
+func (orderManagerStub) Transition(context.Context, int64, int64, service.OrderStatusInput) (service.Order, error) {
+	return service.Order{ID: 1, Status: "WASHING"}, nil
+}
+
 func (orderManagerStub) Pay(context.Context, int64, int64, service.PaymentInput) (service.Payment, error) {
 	return service.Payment{ID: 1}, nil
 }
