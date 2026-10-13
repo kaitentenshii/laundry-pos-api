@@ -25,6 +25,14 @@ func ValidateOrderTransition(from, to, payment string) error {
 	}
 	return nil
 }
+
+func AllowedOrderTransitions(status, payment string) []string {
+	next := map[string]string{"RECEIVED": "WASHING", "WASHING": "COMPLETED", "COMPLETED": "PICKED_UP"}[status]
+	if next == "" || ValidateOrderTransition(status, next, payment) != nil {
+		return []string{}
+	}
+	return []string{next}
+}
 func (s *Orders) Transition(ctx context.Context, actor, id int64, input OrderStatusInput) (Order, error) {
 	if !requestKeyPattern.MatchString(input.RequestKey) {
 		return Order{}, Invalid("request_key", "Kunci permintaan tidak valid.")
