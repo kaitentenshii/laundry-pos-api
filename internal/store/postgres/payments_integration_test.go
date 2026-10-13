@@ -84,3 +84,30 @@ func TestConcurrentPaymentAndNonCashConfirmation(t *testing.T) {
 		t.Fatal("payment duplication")
 	}
 }
+
+func TestPaymentStateIndependentOfLaundryState(t *testing.T) {
+	for _, status := range []string{"RECEIVED", "WASHING", "COMPLETED"} {
+		t.Run(status, func(t *testing.T) {
+			f := setupOrders(t)
+			ctx := context.Background()
+			order, err := f.manager.Create(ctx, f.actor, f.input("payment_state_test_12345"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			f.pool.Exec(ctx, `UPDATE laundry.orders SET status=$2 WHERE id=$1`, order.ID, status)
+			received := int64(32000)
+			input := service.PaymentInput{Method: "TRANSFER", AmountReceived: &received, PaidAt: time.Now(), Confirmed: true, RequestKey: "state_settlement_1234567"}
+			if _, err := f.manager.Pay(ctx, f.actor, order.ID, input); err != nil {
+				t.Fatal(err)
+			}
+			detail, err := f.manager.Get(ctx, order.ID)
+			if err != nil || detail.Status != status || detail.PaidAmount != 32000 || detail.Balance != 0 || detail.Payment == nil || detail.Payment.Method != "TRANSFER" {
+				t.Fatal("payment state contaminated laundry state", err)
+			}
+			list, err := f.manager.List(ctx, service.OrderQuery{Search: order.Number})
+			if err != nil || len(list.Data) != 1 || list.Data[0].PaidAmount != 32000 || list.Data[0].Balance != 0 {
+				t.Fatal("list amounts differ from detail", err)
+			}
+		})
+	}
+}
