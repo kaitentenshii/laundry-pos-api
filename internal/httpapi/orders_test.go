@@ -38,8 +38,8 @@ func (orderManagerStub) Get(_ context.Context, id int64) (service.Order, error) 
 func TestOrderRouteAuthorization(t *testing.T) {
 	for _, role := range []string{"admin", "cashier", "unknown"} {
 		router := NewRouter(slog.New(slog.NewTextHandler(io.Discard, nil)), readinessStub{}, RouterOptions{Auth: &authRoleStub{role: role}, Orders: orderManagerStub{}})
-		for _, endpoint := range []struct{ method, path string }{{"POST", "/orders"}, {"GET", "/orders/1"}} {
-			response := authRequest(router, endpoint.method, endpoint.path, `{"customer_id":1}`, "valid-token")
+		for _, endpoint := range []struct{ method, path string }{{"POST", "/orders"}, {"GET", "/orders/1"}, {"GET", "/orders"}, {"GET", "/orders/1/history"}, {"POST", "/orders/1/payments"}, {"PATCH", "/orders/1/status"}} {
+			response := authRequest(router, endpoint.method, endpoint.path, `{}`, "valid-token")
 			if role == "unknown" {
 				if response.Code != 403 {
 					t.Fatal("unknown role accepted")
