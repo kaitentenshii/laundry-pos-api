@@ -216,3 +216,4 @@ Migration 000007 adds orders and immutable transaction item snapshots. Authentic
 Orders support up to 30 service lines. Each KG line accepts three decimal places; ITEM lines require whole pieces. If any line is invalid the entire transaction is rejected.
 The frontend sends expected_total. A mismatch with the locked current prices rejects creation and prompts the user to review refreshed prices. Both layers use integer arithmetic and half-up rounding for each line.
 Order numbers use the database identity sequence (LD-<id>) and a unique database constraint. Concurrent inserts cannot share an identity; concurrent retries with one request key resolve to one order.
+GET /orders returns data,total,page,page_size. Filters: status, payment_status, from/to (inclusive calendar dates in UTC+7), page and page_size (max100). Ordering is newest-first. Totals and items are read under one repeatable-read snapshot.

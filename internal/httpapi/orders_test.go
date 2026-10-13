@@ -10,6 +10,10 @@ import (
 
 type orderManagerStub struct{}
 
+func (orderManagerStub) List(context.Context, service.OrderQuery) (service.OrderList, error) {
+	return service.OrderList{Data: []service.Order{}}, nil
+}
+
 func (orderManagerStub) Create(_ context.Context, actor int64, input service.OrderInput) (service.Order, error) {
 	return service.Order{ID: 1, CreatedBy: actor, CustomerID: input.CustomerID, Status: "RECEIVED", PaymentStatus: "UNPAID"}, nil
 }
